@@ -54,7 +54,12 @@
             <span>Home</span>
           </a>
 
-          <!-- Collapse Preferiti — <li> popolati via cloneNode da Simo/Cris -->
+          <!-- Template preferito — Simo/Cris clonano con cloneNode(true) per ogni item -->
+          <template id="tmpl-fav-item">
+            <li><a class="dropdown-item" href="#"></a></li>
+          </template>
+
+          <!-- Collapse Preferiti — <li> popolati via cloneNode (tmpl-fav-item) da Simo/Cris -->
           <div>
             <a data-bs-toggle="collapse" data-bs-target="#sidebar-favs-list" role="button">
               <span class="ico"><ion-icon name="heart-outline"></ion-icon></span>
@@ -62,11 +67,15 @@
             </a>
             <ul class="collapse" id="sidebar-favs-list">
               <li><span class="dropdown-item text-secondary">Nessuno ancora</span></li>
-              <!-- cloneNode Simo/Cris -->
             </ul>
           </div>
 
-          <!-- Collapse Playlist — <li> popolati via cloneNode da Simo/Cris -->
+          <!-- Template playlist — Simo/Cris clonano con cloneNode(true) per ogni item -->
+          <template id="tmpl-playlist-item">
+            <li><a class="dropdown-item" href="#"></a></li>
+          </template>
+
+          <!-- Collapse Playlist — <li> popolati via cloneNode (tmpl-playlist-item) da Simo/Cris -->
           <div>
             <a data-bs-toggle="collapse" data-bs-target="#sidebar-playlists-list" role="button">
               <span class="ico"><ion-icon name="musical-notes-outline"></ion-icon></span>
@@ -74,7 +83,6 @@
             </a>
             <ul class="collapse" id="sidebar-playlists-list">
               <li><span class="dropdown-item text-secondary">Nessuna playlist</span></li>
-              <!-- cloneNode Simo/Cris -->
             </ul>
           </div>
 
@@ -179,33 +187,21 @@
               ></span>
               <span>Preferiti</span>
             </a>
+            <!-- cloneNode Simo/Cris — usa tmpl-fav-item definito nella sidebar -->
             <ul class="collapse" id="mobile-favs-list">
-              <li>
-                <span class="dropdown-item text-secondary">Nessuno ancora</span>
-              </li>
-              <!-- cloneNode Simo/Cris -->
+              <li><span class="dropdown-item text-secondary">Nessuno ancora</span></li>
             </ul>
           </div>
 
           <!-- Collapse Playlist — <li> popolati via cloneNode da Simo/Cris -->
           <div>
-            <a
-              data-bs-toggle="collapse"
-              data-bs-target="#mobile-playlists-list"
-              role="button"
-            >
-              <span class="ico"
-                ><ion-icon name="musical-notes-outline"></ion-icon
-              ></span>
+            <a data-bs-toggle="collapse" data-bs-target="#mobile-playlists-list" role="button">
+              <span class="ico"><ion-icon name="musical-notes-outline"></ion-icon></span>
               <span>Playlist</span>
             </a>
+            <!-- cloneNode Simo/Cris — usa tmpl-playlist-item definito nella sidebar -->
             <ul class="collapse" id="mobile-playlists-list">
-              <li>
-                <span class="dropdown-item text-secondary"
-                  >Nessuna playlist</span
-                >
-              </li>
-              <!-- cloneNode Simo/Cris -->
+              <li><span class="dropdown-item text-secondary">Nessuna playlist</span></li>
             </ul>
           </div>
         </nav>
