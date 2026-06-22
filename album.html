@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EpiTunes — Album</title>
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar"></aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div class="topbar-nav">
+            <button class="nav-btn" aria-label="Indietro">‹</button>
+            <button class="nav-btn" aria-label="Avanti">›</button>
+          </div>
+          <div class="user-pill">Studente Epicode</div>
+        </header>
+
+        <!--
+          COSTRUISCI IN album.js:
+          - Leggi l'id dalla query string con URLSearchParams
+          - fetch lookup?id=NNN&entity=song
+          - Primo risultato = collection (album), gli altri = tracks
+          - Hero: cover grande + titolo album + artista + anno + numero brani
+          - Tracklist: lista numerata di brani con titolo + durata; click su brano -> Player
+        -->
+        <section class="album-page">
+          <div class="album-hero" id="album-hero"></div>
+          <div class="tracklist" id="tracklist"></div>
+        </section>
+      </main>
+
+      <footer class="player"></footer>
+    </div>
+
+    <audio id="audio-element"></audio>
+
+    <script src="js/common.js"></script>
+    <script src="js/album.js"></script>
+  </body>
+</html>

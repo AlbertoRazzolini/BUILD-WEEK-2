@@ -1,0 +1,640 @@
+/* ============================================================
+   EpiTunes — CSS base
+   Layout 3 zone (sidebar / main / player) responsive con Grid.
+   Palette scura ispirata a Spotify, accenti gialli brand Epicode.
+   Lo studente NON deve modificare questo file salvo voglia
+   personalizzare l'aspetto. Tutto il lavoro è in HTML e JS.
+   ============================================================ */
+
+:root {
+  --bg-base: #121212;
+  --bg-elev: #181818;
+  --bg-elev-hover: #282828;
+  --bg-sidebar: #000000;
+  --bg-player: #181818;
+  --bg-input: #ffffff;
+  --text-primary: #ffffff;
+  --text-secondary: #b3b3b3;
+  --text-input: #000000;
+  --accent: #f7d800;        /* giallo Epicode */
+  --accent-dark: #d6ba00;
+  --success: #1ed760;       /* verde "play" */
+  --danger: #e25555;
+  --border: #2a2a2a;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* ============================ Layout 3 zone ============================ */
+
+.app {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  grid-template-rows: 1fr 90px;
+  grid-template-areas:
+    "sidebar main"
+    "player  player";
+  height: 100vh;
+}
+
+.sidebar {
+  grid-area: sidebar;
+  background: var(--bg-sidebar);
+  padding: 24px 16px;
+  overflow-y: auto;
+}
+
+.main {
+  grid-area: main;
+  background: linear-gradient(180deg, #1f1f1f 0%, var(--bg-base) 280px);
+  overflow-y: auto;
+  position: relative;
+}
+
+.player {
+  grid-area: player;
+  background: var(--bg-player);
+  border-top: 1px solid var(--border);
+  padding: 12px 16px;
+}
+
+/* ============================ Sidebar ============================ */
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px 24px 8px;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.5px;
+}
+.brand-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #000;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.sidebar-nav a:hover {
+  color: var(--text-primary);
+  background: var(--bg-elev-hover);
+}
+.sidebar-nav a.active {
+  color: var(--text-primary);
+  background: var(--bg-elev);
+}
+.sidebar-nav a .ico {
+  font-size: 18px;
+  width: 22px;
+  text-align: center;
+}
+
+.sidebar-section-title {
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  padding: 16px 12px 8px 12px;
+  margin: 0;
+}
+
+.sidebar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 4px;
+  list-style: none;
+  margin: 0;
+}
+.sidebar-list li {
+  padding: 6px 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-list li:hover {
+  color: var(--text-primary);
+  background: var(--bg-elev);
+}
+
+/* ============================ Topbar ============================ */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: rgba(18, 18, 18, 0.7);
+  backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+}
+.topbar-nav {
+  display: flex;
+  gap: 8px;
+}
+.nav-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+}
+.user-pill {
+  background: rgba(0, 0, 0, 0.6);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+/* ============================ Sezioni / Rows ============================ */
+
+.home,
+.search,
+.album-page,
+.artist-page {
+  padding: 16px 24px 32px 24px;
+}
+
+.row {
+  margin-top: 24px;
+}
+.row h2 {
+  margin: 0 0 12px 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+/* ============================ Card ============================ */
+
+.card {
+  background: var(--bg-elev);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  transition: background 0.18s ease;
+  position: relative;
+  cursor: pointer;
+}
+.card:hover {
+  background: var(--bg-elev-hover);
+}
+.card-image-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: 12px;
+  background: #000;
+}
+.card-image-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.card-image-wrap.round {
+  border-radius: 50%;
+}
+.card-title {
+  font-weight: 700;
+  font-size: 14px;
+  margin: 0 0 4px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.card-sub {
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-play {
+  position: absolute;
+  right: 22px;
+  bottom: 82px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--success);
+  color: #000;
+  border: none;
+  font-size: 20px;
+  display: grid;
+  place-items: center;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.2s, transform 0.2s;
+}
+.card:hover .card-play {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.card-fav {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  border: none;
+  font-size: 16px;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.card:hover .card-fav,
+.card-fav.is-fav {
+  opacity: 1;
+}
+.card-fav.is-fav {
+  color: var(--danger);
+}
+
+/* ============================ Hero album / artista ============================ */
+
+.album-hero,
+.artist-hero {
+  display: flex;
+  gap: 24px;
+  align-items: flex-end;
+  padding: 24px 0 16px 0;
+}
+.album-cover {
+  width: 220px;
+  height: 220px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: #000;
+  box-shadow: var(--shadow);
+  flex-shrink: 0;
+}
+.album-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.hero-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.hero-kicker {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 700;
+}
+.hero-title {
+  font-size: clamp(32px, 6vw, 72px);
+  font-weight: 900;
+  margin: 0;
+  line-height: 1.05;
+}
+.hero-sub {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin: 0;
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0 24px 0;
+}
+.btn-play-big {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--success);
+  color: #000;
+  border: none;
+  font-size: 24px;
+}
+.btn-fav-big {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--text-secondary);
+  color: var(--text-secondary);
+  font-size: 18px;
+}
+.btn-fav-big.is-fav {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+/* ============================ Tracklist ============================ */
+
+.tracklist {
+  margin-top: 8px;
+}
+.track-row {
+  display: grid;
+  grid-template-columns: 32px 1fr 80px 48px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.track-row:hover {
+  background: var(--bg-elev);
+}
+.track-row.is-playing {
+  color: var(--success);
+}
+.track-num {
+  color: var(--text-secondary);
+  text-align: center;
+}
+.track-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.track-time {
+  color: var(--text-secondary);
+  text-align: right;
+}
+.track-fav {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+.track-fav.is-fav {
+  color: var(--danger);
+}
+
+/* ============================ Search ============================ */
+
+.search-box {
+  margin-top: 8px;
+  margin-bottom: 16px;
+}
+.search-input {
+  width: 100%;
+  max-width: 480px;
+  padding: 12px 16px;
+  border-radius: 999px;
+  border: none;
+  background: var(--bg-input);
+  color: var(--text-input);
+  font-size: 14px;
+  outline: none;
+}
+
+/* ============================ Player ============================ */
+
+.player {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  align-items: center;
+  gap: 16px;
+}
+.player-track {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.player-cover {
+  width: 56px;
+  height: 56px;
+  border-radius: 4px;
+  background: #000;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.player-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.player-meta {
+  min-width: 0;
+}
+.player-title {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+.player-artist {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+
+.player-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.player-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.btn-ctrl {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+.btn-ctrl:hover {
+  color: var(--text-primary);
+}
+.btn-play {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #fff;
+  color: #000;
+  border: none;
+  font-size: 14px;
+}
+
+.player-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 600px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.progress-bar,
+.volume-bar {
+  flex: 1;
+  height: 4px;
+  background: #4d4d4d;
+  border-radius: 2px;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+}
+.progress-fill,
+.volume-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--text-primary);
+  border-radius: 2px;
+}
+.progress-bar:hover .progress-fill,
+.volume-bar:hover .volume-fill {
+  background: var(--success);
+}
+
+.player-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.volume-bar {
+  width: 120px;
+}
+
+/* ============================ Loading / empty ============================ */
+
+.loader {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+.empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+/* ============================ Responsive ============================ */
+
+@media (max-width: 800px) {
+  .app {
+    grid-template-columns: 80px 1fr;
+  }
+  .brand-text,
+  .sidebar-section-title,
+  .sidebar-list,
+  .sidebar-nav a span:not(.ico) {
+    display: none;
+  }
+  .sidebar-nav a {
+    justify-content: center;
+    padding: 10px 0;
+  }
+  .album-hero,
+  .artist-hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .album-cover {
+    width: 160px;
+    height: 160px;
+  }
+}
+
+@media (max-width: 540px) {
+  .app {
+    grid-template-columns: 0 1fr;
+  }
+  .sidebar {
+    display: none;
+  }
+  .player {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .player-right {
+    display: none;
+  }
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+}

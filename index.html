@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EpiTunes — Home</title>
+    <link rel="stylesheet" href="assets/css/app.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <!-- Riempi via JS in common.js -->
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div class="topbar-nav">
+            <button class="nav-btn" aria-label="Indietro">‹</button>
+            <button class="nav-btn" aria-label="Avanti">›</button>
+          </div>
+          <div class="user-pill">Studente Epicode</div>
+        </header>
+
+        <section class="home">
+          <!--
+            SEZIONI DA COSTRUIRE (vedi js/home.js):
+            - "Riprodotti di recente" (da localStorage history)
+            - "I tuoi preferiti" (da localStorage favourites)
+            - "Suggerimenti pop"
+            - "Suggerimenti rock"
+            - "Suggerimenti italian pop"
+            Ogni sezione è un <section class="row"> con titolo h2 e una griglia di .card.
+          -->
+        </section>
+      </main>
+
+      <footer class="player">
+        <!-- Riempi via JS in common.js -->
+      </footer>
+    </div>
+
+    <audio id="audio-element"></audio>
+
+    <script src="assets/js/common.js"></script>
+    <script src="assets/js/home.js"></script>
+  </body>
+</html>

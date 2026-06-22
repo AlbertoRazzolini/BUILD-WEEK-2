@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EpiTunes — Artista</title>
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar"></aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div class="topbar-nav">
+            <button class="nav-btn" aria-label="Indietro">‹</button>
+            <button class="nav-btn" aria-label="Avanti">›</button>
+          </div>
+          <div class="user-pill">Studente Epicode</div>
+        </header>
+
+        <!--
+          COSTRUISCI IN artist.js:
+          - Leggi l'id dalla query string con URLSearchParams
+          - fetch lookup?id=NNN&entity=song&limit=10
+          - Primo risultato = artist, gli altri = top tracks
+          - Hero: titolo artista grande + genere + numero ascoltatori (inventato/random)
+          - Lista popolare di top tracks; click su brano -> Player
+        -->
+        <section class="artist-page">
+          <div class="artist-hero" id="artist-hero"></div>
+          <div class="top-tracks" id="top-tracks"></div>
+        </section>
+      </main>
+
+      <footer class="player"></footer>
+    </div>
+
+    <audio id="audio-element"></audio>
+
+    <script src="js/common.js"></script>
+    <script src="js/artist.js"></script>
+  </body>
+</html>

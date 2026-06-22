@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EpiTunes — Cerca</title>
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar"></aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div class="topbar-nav">
+            <button class="nav-btn" aria-label="Indietro">‹</button>
+            <button class="nav-btn" aria-label="Avanti">›</button>
+          </div>
+          <div class="user-pill">Studente Epicode</div>
+        </header>
+
+        <section class="search">
+          <div class="search-box">
+            <input
+              type="text"
+              id="search-input"
+              class="search-input"
+              placeholder="Cerca un brano, un album, un artista..."
+              autocomplete="off"
+            />
+          </div>
+
+          <!--
+            COSTRUISCI IN search.js:
+            - Debounce 400ms su "input" -> chiamata fetch a iTunes search
+            - Tre sezioni: brani, album, artisti (Promise.all con entity differenti)
+            - Salva ultima query in localStorage; al caricamento, riprendila
+            - Click su brano -> Player; click su album/artist -> album.html/artist.html?id=...
+          -->
+          <div class="search-results">
+            <section class="row" id="row-tracks" hidden>
+              <h2>Brani</h2>
+              <div class="grid" id="grid-tracks"></div>
+            </section>
+            <section class="row" id="row-albums" hidden>
+              <h2>Album</h2>
+              <div class="grid" id="grid-albums"></div>
+            </section>
+            <section class="row" id="row-artists" hidden>
+              <h2>Artisti</h2>
+              <div class="grid" id="grid-artists"></div>
+            </section>
+          </div>
+        </section>
+      </main>
+
+      <footer class="player"></footer>
+    </div>
+
+    <audio id="audio-element"></audio>
+
+    <script src="js/common.js"></script>
+    <script src="js/search.js"></script>
+  </body>
+</html>
