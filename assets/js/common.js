@@ -73,11 +73,21 @@ const MAX_HISTORY = 12;
   - In caso di errore ritorna { results: [], resultCount: 0 } per semplificare i chiamanti
 */
 const fetchJSON = async (url) => {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("fetchJSON ha fallito:", error)
+  }
+  return { results: [], resultCount: 0 };
+};
   // TODO: implementare con try/catch + await response.json()
   // - Se response.ok è false, lancia un Error
   // - Se la chiamata fallisce per rete, ritorna oggetto vuoto e logga l'errore
-  return { results: [], resultCount: 0 };
-};
+  
 
 /*
   bigArt(url)
