@@ -16,7 +16,7 @@
   <body>
     <div class="app">
       <!-- ===== SIDEBAR (tablet + desktop) =====
-           Sotto 540px è nascosta da app.css.
+           Sotto 576px è nascosta da app.css.
            Su mobile viene sostituita dall'offcanvas Bootstrap (pannello
            laterale che scivola aprendosi dal hamburger nell'header).
            I <li> dei dropdown vengono popolati via cloneNode da Simo/Cris.
@@ -29,9 +29,9 @@
 
         <!-- Filtri — badge fissi, Lucio aggiunge addEventListener per il click -->
         <!-- Al click: Javier fetcha, Simo/Cris popolano #sidebar-filter-results -->
-        <p class="card-title fs-4 text-secondary">Filtri</p>
-        <div class="row g-1 mb-4">
-          <div class="col-12 col-md-4">
+        <p class="card-title fs-4 text-secondary d-none d-md-block">Filtri</p>
+        <div class="row g-1 mb-4 d-none d-md-flex">
+          <div class="col-12 col-lg-4">
             <button
               class="badge bg-secondary w-100 py-2 fs-6"
               data-filter="artisti"
@@ -39,7 +39,7 @@
               Artisti
             </button>
           </div>
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-lg-4">
             <button
               class="badge bg-secondary w-100 py-2 fs-6"
               data-filter="album"
@@ -47,7 +47,7 @@
               Album
             </button>
           </div>
-          <div class="col-12 col-md-4">
+          <div class="col-12 col-lg-4">
             <button
               class="badge bg-secondary w-100 py-2 fs-6"
               data-filter="generi"
@@ -88,7 +88,7 @@
         <!-- Template artista — avatar circolare + nome artista -->
         <!-- Simo/Cris: cloneNode(true) → popolare .artist-cover src, .artist-name -->
         <template id="tmpl-artist-item">
-          <div class="d-flex align-items-center gap-2 p-2">
+          <div class="d-flex align-items-center gap-2 py-2">
             <img
               class="artist-cover rounded-circle flex-shrink-0"
               src="https://placehold.co/40x40"
@@ -104,11 +104,6 @@
         <div id="sidebar-filter-results"></div>
 
         <nav class="sidebar-nav">
-          <a href="index.html" class="active">
-            <span class="ico"><ion-icon name="home-outline"></ion-icon></span>
-            <span>Home</span>
-          </a>
-
           <!-- Template preferito — brano con cover + titolo + artista -->
           <!-- Simo/Cris: cloneNode(true) → popolare .fav-cover src, .fav-title, .fav-artist -->
           <template id="tmpl-fav-item">
@@ -132,6 +127,7 @@
               data-bs-toggle="collapse"
               data-bs-target="#sidebar-favs-list"
               role="button"
+              class="mb-1"
             >
               <span class="ico"
                 ><ion-icon name="heart-outline"></ion-icon
@@ -161,6 +157,7 @@
               data-bs-toggle="collapse"
               data-bs-target="#sidebar-playlists-list"
               role="button"
+              class="mb-1"
             >
               <span class="ico"
                 ><ion-icon name="musical-notes-outline"></ion-icon
@@ -214,6 +211,50 @@
             - "Suggerimenti italian pop"
             Ogni sezione è un <section class="row"> con titolo h2 e una griglia di .card.
           -->
+
+          <!-- Template card brano/album — Simo/Cris clonano con cloneNode(true) -->
+          <!-- Popolare: img[src], .card-title, .card-sub -->
+          <!-- .card-fav aggiunge classe .is-fav quando messo tra i preferiti -->
+          <template id="tmpl-card">
+            <div class="card" style="min-width: 160px">
+              <div class="card-image-wrap">
+                <img src="" alt="cover" />
+                <button class="card-play" aria-label="Play">
+                  <ion-icon name="play-outline"></ion-icon>
+                </button>
+              </div>
+              <button class="card-fav" aria-label="Aggiungi ai preferiti">
+                <ion-icon name="heart-outline"></ion-icon>
+              </button>
+              <p class="card-title"></p>
+              <p class="card-sub"></p>
+            </div>
+          </template>
+
+          <section class="mb-5" id="row-history">
+            <h2 class="fs-5 mb-3">Riprodotti di recente</h2>
+            <div class="d-flex gap-3 overflow-x-auto pb-2"></div>
+          </section>
+
+          <section class="mb-5" id="row-favourites">
+            <h2 class="fs-5 mb-3">I tuoi preferiti</h2>
+            <div class="d-flex gap-3 overflow-x-auto pb-2"></div>
+          </section>
+
+          <section class="mb-5" id="row-pop">
+            <h2 class="fs-5 mb-3">Suggerimenti pop</h2>
+            <div class="d-flex gap-3 overflow-x-auto pb-2"></div>
+          </section>
+
+          <section class="mb-5" id="row-rock">
+            <h2 class="fs-5 mb-3">Suggerimenti rock</h2>
+            <div class="d-flex gap-3 overflow-x-auto pb-2"></div>
+          </section>
+
+          <section class="mb-5" id="row-hits">
+            <h2 class="fs-5 mb-3">Italian pop</h2>
+            <div class="d-flex gap-3 overflow-x-auto pb-2"></div>
+          </section>
         </section>
       </main>
 
