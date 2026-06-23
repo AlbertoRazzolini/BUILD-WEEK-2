@@ -184,20 +184,25 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 24px;
+  padding: 12px 24px;
 }
 .topbar-nav {
   display: flex;
   gap: 8px;
 }
 .nav-btn {
-  width: 32px;
-  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  aspect-ratio: 1 / 1;
   border-radius: 50%;
   border: none;
   background: rgba(0, 0, 0, 0.6);
   color: #fff;
-  font-size: 18px;
+  font-size: 25px;
   line-height: 1;
 }
 .user-pill {
@@ -218,7 +223,7 @@ button {
 }
 
 .row {
-  margin-top: 24px;
+  margin-top: 12px;
 }
 .row h2 {
   margin: 0 0 12px 0;
@@ -459,7 +464,7 @@ button {
 }
 .search-input {
   width: 100%;
-  max-width: 480px;
+  min-width: 250px;
   padding: 12px 16px;
   border-radius: 999px;
   border: none;
@@ -603,7 +608,7 @@ button {
 
 /* ============================ Responsive ============================ */
 
-@media (max-width: 800px) {
+@media (max-width: 767px) {
   .app {
     grid-template-columns: 80px 1fr;
   }
@@ -626,9 +631,6 @@ button {
     width: 160px;
     height: 160px;
   }
-}
-
-@media (max-width: 540px) {
   .app {
     grid-template-columns: 0 1fr;
   }
@@ -646,3 +648,4 @@ button {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   }
 }
+
