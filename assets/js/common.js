@@ -133,33 +133,38 @@ const debounce = (fn, ms) => {
   Campi utili dell'API: trackId, trackName, artistName, collectionName,
   collectionId, artistId, artworkUrl100, previewUrl, trackTimeMillis.
 */
+
+//cosa prendere dall API per ogni singolo brano (chiamando con il this)
 class Track {
   constructor(raw) {
-    // TODO: assegna alle property di this i valori da raw
-    // (id, title, artist, album, albumId, artistId, cover, previewUrl, durationMs)
+    this.id = raw.trackId; //ID
+    this.title = raw.trackName; //nome traccia
+    this.artist = raw.artistName;//nome artista
+    this.album = raw.collectionName;//nome album
+    this.albumId = raw.collectionId;//ID album
+    this.artistId = raw.artistId;//ID artista
+    this.cover = raw.artworkUrl100;//link immagine copertina
+    this.previewUrl = raw.previewUrl;//link streaming di 30 secondi
+    this.durationMs = raw.trackTimeMillis;//durata in millisecondi
   }
 }
 
-/*
-  Classe Album
-  Modella un album (wrapperType === "collection").
-  Campi utili: collectionId, collectionName, artistName, artworkUrl100,
-  releaseDate, trackCount.
-*/
 class Album {
   constructor(raw) {
-    // TODO: come sopra
+    this.id = raw.collectionId;//ID album
+    this.title = raw.collectionName;//nome album
+    this.artist = raw.artistName;//chi è l'artista
+    this.cover = raw.artworkUrl100;//cover album
+    this.releaseDate = raw.releaseDate;//data di uscita
+    this.trackCount = raw.trackCount;//numero di tracce incluse
   }
 }
 
-/*
-  Classe Artist
-  Modella un artista (wrapperType === "artist").
-  Campi utili: artistId, artistName, primaryGenreName.
-*/
 class Artist {
   constructor(raw) {
-    // TODO: come sopra
+    this.id = raw.artistId;//ID artista
+    this.title = raw.artistName;//nome artista
+    this.genre = raw.primaryGenreName;//genere musicale di questa traccia
   }
 }
 
@@ -186,16 +191,36 @@ class Artist {
 */
 class Player {
   constructor() {
-    this.audio = document.querySelector("#audio-element");
-    this.currentTrack = null;
-    this.isPlaying = false;
-    // TODO: salva i riferimenti agli elementi del footer (.player-cover, .player-title, ...)
-    // TODO: aggancia eventi audio (timeupdate, ended)
-  }
+    this.audio = document.querySelector("#audio-element");//recupera tag audio a riga circa 225
+    this.currentTrack = null;//brano iniziale : nessuno
+    this.isPlaying = false;//riproduzione iniziale : nessuno
 
+    if (this.audio) {//attivalo durante tutta la durata del brano
+      this.audio.addEventListener("timeupdate", () => {
+        if (!this.audio.duration) return;//non attivarti se non ce nessun branp
+        const currentEl = document.getElementById("time-current");//seleziona testo tempo corrente a sinistra
+        const fillEl = document.getElementById("progress-fill");//seleziona barra progresso
+        if (currentEl) {//trasforma il vero tempo in formato da spotify
+          currentEl.textContent = formatTime(this.audio.currentTime * 1000);
+        }
+        if (fillEl) {//ascolta il vero avanzamento del brano e riempi la barra progresso
+          const percent = (this.audio.currentTime / this.audio.duration) * 100;
+          fillEl.style.width = `${percent}%`;
+        }
+      });
+//cosa succede qudnado il brano finisce
+      this.audio.addEventListener("ended", () => {
+        this.isPlaying = false;//non in riproduzione
+        const btnToggle = document.getElementById("btn-toggle");//prendi il pulsante play
+        if (btnToggle) btnToggle.textContent = "▶";//rimetti icona play al posto di pausa
+      });
+    }
+  }
+//TUTTO L'HTML CHE CI SERVE NEL NOSTRO PLAYER/FOOTER
   mount() {
     const footer = document.querySelector(".player");
     if (!footer) return;
+    //struttura spotify
     footer.innerHTML = `
       <div class="player-track">
         <div class="player-cover"><img id="player-cover-img" alt="" /></div>
@@ -230,30 +255,89 @@ class Player {
       </div>
     `;
 
-    // TODO: aggancia eventi click su #btn-toggle, click su #progress-bar (seek),
-    //       click su #volume-bar (setVolume), volume iniziale (this.audio.volume = 0.8).
-  }
+    if (this.audio) {//volume di defalut all 80 %
+      this.audio.volume = 0.8;
+    }
 
+    const btnToggle = document.getElementById("btn-toggle");
+    if (btnToggle) {//dai un listener al bottone play /pause
+      btnToggle.addEventListener("click", () => this.togglePlay());
+    }
+
+    const progressBar = document.getElementById("progress-bar");
+    if (progressBar) {//listener per il click della barra del progresso della canzone
+      progressBar.addEventListener("click", (e) => {
+        if (!this.currentTrack || !this.audio.duration) return;
+        const rect = progressBar.getBoundingClientRect();//dammi le coordinate della barra
+        const clickX = e.clientX - rect.left;//calcola dove ho toccato esattamente
+        const width = rect.width;//larghezza totale barra
+        const percent = clickX / width;//trasforma il click in percentuale
+        this.seek(percent);//sposta la riproduzione a quella percentuale
+      });
+    }
+//listener della barra del volume
+    const volumeBar = document.getElementById("volume-bar");
+    if (volumeBar) {
+      volumeBar.addEventListener("click", (e) => {
+        const rect = volumeBar.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const width = rect.width;//sempre tra 0 e 1 massimo
+        const percent = Math.max(0, Math.min(1, clickX / width));
+        this.setVolume(percent);//applica il nuovo volume
+      });
+    }
+  }
+//ricevi il tarck di Apple e riproducilo
   play(track) {
-    // TODO:
-    // 1) salva track in this.currentTrack
-    // 2) this.audio.src = track.previewUrl
-    // 3) this.audio.play()
-    // 4) aggiorna UI (cover, titolo, artista, durata totale, icona play -> "⏸")
-    // 5) chiama addToHistory(track)
-    // 6) marca .track-row.is-playing se siamo nella tracklist
-  }
+    if (!track || !track.previewUrl) return;
+    this.currentTrack = track;
+    this.audio.src = track.previewUrl;
+    this.audio.play();
+    this.isPlaying = true;
+//aggiorna tutta linterfaccia del footer con i nuovi dati del API della canzone da ascoltare
+    const coverImg = document.getElementById("player-cover-img");
+    const titleEl = document.getElementById("player-title");
+    const artistEl = document.getElementById("player-artist");
+    const totalEl = document.getElementById("time-total");
+    const btnToggle = document.getElementById("btn-toggle");
 
+    if (coverImg) coverImg.src = track.cover;
+    if (titleEl) titleEl.textContent = track.title;
+    if (artistEl) artistEl.textContent = track.artist;
+    if (totalEl) totalEl.textContent = formatTime(track.durationMs);
+    if (btnToggle) btnToggle.textContent = "⏸";
+
+    if (typeof addToHistory === "function") {
+      addToHistory(track);
+    }
+  }
+//comportamento del toggle delbottone play /pause
   togglePlay() {
-    // TODO: alterna play/pause + aggiorna icona del button
+    if (!this.currentTrack) return;
+    const btnToggle = document.getElementById("btn-toggle");
+    if (this.isPlaying) {
+      this.audio.pause();
+      this.isPlaying = false;
+      if (btnToggle) btnToggle.textContent = "▶";
+    } else {
+      this.audio.play();
+      this.isPlaying = true;
+      if (btnToggle) btnToggle.textContent = "⏸";
+    }
   }
-
+//regola volume sempre tran 0 e 1
   setVolume(v) {
-    // TODO: this.audio.volume = v; aggiorna #volume-fill style.width
+    if (!this.audio) return;
+    this.audio.volume = v;
+    const volumeFill = document.getElementById("volume-fill");
+    if (volumeFill) {
+      volumeFill.style.width = `${v * 100}%`;
+    }
   }
 
   seek(percent) {
-    // TODO: this.audio.currentTime = this.audio.duration * percent
+    if (!this.audio || !this.audio.duration) return;
+    this.audio.currentTime = percent * this.audio.duration;
   }
 }
 
@@ -306,7 +390,7 @@ const renderSidebar = (activePage) => {
       <span class="brand-text">EpiTunes</span>
     </div>
     <nav class="sidebar-nav">
-      <a href="index.html"  data-page="home"   ${activePage === "home"   ? 'class="active"' : ""}><span class="ico">🏠</span><span>Home</span></a>
+      <a href="index.html"  data-page="home"   ${activePage === "home" ? 'class="active"' : ""}><span class="ico">🏠</span><span>Home</span></a>
       <a href="search.html" data-page="search" ${activePage === "search" ? 'class="active"' : ""}><span class="ico">🔍</span><span>Cerca</span></a>
     </nav>
     <p class="sidebar-section-title">I tuoi preferiti</p>
