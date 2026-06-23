@@ -29,15 +29,23 @@
 
         <!-- Filtri — badge fissi, Lucio aggiunge addEventListener per il click -->
         <!-- Al click: Javier fetcha, Simo/Cris popolano #sidebar-filter-results -->
-        <p class="sidebar-section-title">Filtri</p>
-        <div class="d-flex flex-wrap gap-1 px-2 mb-2">
-          <button class="badge bg-secondary" data-filter="artisti">
-            Artisti
-          </button>
-          <button class="badge bg-secondary" data-filter="album">Album</button>
-          <button class="badge bg-secondary" data-filter="generi">
-            Generi
-          </button>
+        <p class="card-title fs-4 text-secondary">Filtri</p>
+        <div class="row g-1 mb-4">
+          <div class="col-12 col-md-4">
+            <button class="badge bg-secondary w-100 py-2 fs-6" data-filter="artisti">
+              Artisti
+            </button>
+          </div>
+          <div class="col-12 col-md-4">
+            <button class="badge bg-secondary w-100 py-2 fs-6" data-filter="album">
+              Album
+            </button>
+          </div>
+          <div class="col-12 col-md-4">
+            <button class="badge bg-secondary w-100 py-2 fs-6" data-filter="generi">
+              Generi
+            </button>
+          </div>
         </div>
 
         <!-- Template card filtro — Simo/Cris clonano questo nodo con cloneNode(true)
@@ -132,10 +140,10 @@
             />
           </div>
           <!-- Desktop: user pill — visibile da sm (576px) in su -->
-          <button class="user-pill d-none d-sm-block">👤 Utente</button>
+          <button class="user-pill d-none d-md-block">👤 Utente</button>
           <!-- Mobile: hamburger — visibile solo sotto sm (576px) -->
           <button
-            class="nav-btn d-sm-none d-flex align-items-center justify-content-center"
+            class="nav-btn d-md-none d-flex align-items-center justify-content-center"
             data-bs-toggle="offcanvas"
             data-bs-target="#mobile-menu"
             aria-label="Menu"
