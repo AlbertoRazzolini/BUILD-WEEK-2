@@ -395,7 +395,7 @@ const toggleFavourite = (track) => {
 /*
   renderSidebar(activePage)
   - activePage: "home" | "search" | "library" (per evidenziare il link attivo)
-*/
+
 const renderSidebar = (activePage) => {
   const sidebar = document.querySelector(".sidebar");
   if (!sidebar) return;
@@ -413,32 +413,7 @@ const renderSidebar = (activePage) => {
   `;
   // TODO (opzionale): popola #sidebar-favs con i titoli dei preferiti
 };
-
-const renderSidebarFavourites = () => {
-  const list = document.querySelector("#sidebar-favs-list");
-  const tmpl = document.querySelector("#tmpl-fav-item");
-
-  if (!list || !tmpl) return;
-
-  const items = getFavourites().map((track) => {
-    const item = tmpl.content.firstElementChild.cloneNode(true);
-
-    item.querySelector(".fav-cover").src = track.cover;
-    item.querySelector(".fav-title").textContent = track.title;
-    item.querySelector(".fav-artist").textContent = track.artist;
-
-    item.addEventListener("click", () => {
-      if (window.player) {
-        window.player.play(track);
-      }
-    });
-
-    return item;
-  });
-
-  list.replaceChildren(...items);
-};
-
+*/
 /* ============================ 7. Inizializzazione ============================ */
 
 /*
