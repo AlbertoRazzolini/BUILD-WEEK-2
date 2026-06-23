@@ -160,7 +160,7 @@ myFunction();
   Campi utili dell'API: trackId, trackName, artistName, collectionName,
   collectionId, artistId, artworkUrl100, previewUrl, trackTimeMillis.
 */
-
+//skybidi
 //cosa prendere dall API per ogni singolo brano (chiamando con il this)
 class Track {
   constructor(raw) {
