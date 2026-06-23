@@ -31,17 +31,23 @@
         <!-- Al click: Javier fetcha, Simo/Cris popolano #sidebar-filter-results -->
         <p class="sidebar-section-title">Filtri</p>
         <div class="d-flex flex-wrap gap-1 px-2 mb-2">
-          <button class="badge bg-secondary" data-filter="artisti">Artisti</button>
+          <button class="badge bg-secondary" data-filter="artisti">
+            Artisti
+          </button>
           <button class="badge bg-secondary" data-filter="album">Album</button>
-          <button class="badge bg-secondary" data-filter="generi">Generi</button>
+          <button class="badge bg-secondary" data-filter="generi">
+            Generi
+          </button>
         </div>
 
         <!-- Template card filtro — Simo/Cris clonano questo nodo con cloneNode(true)
              e lo popolano prima di appendere in #sidebar-filter-results -->
         <template id="tmpl-filter-result">
           <div class="sidebar-filter-item">
-            <span class="ico"></span>          <!-- icona/img — sempre visibile -->
-            <span class="filter-label"></span> <!-- testo — nascosto su tablet da app.css -->
+            <span class="ico"></span>
+            <!-- icona/img — sempre visibile -->
+            <span class="filter-label"></span>
+            <!-- testo — nascosto su tablet da app.css -->
           </div>
         </template>
 
@@ -61,12 +67,20 @@
 
           <!-- Collapse Preferiti — <li> popolati via cloneNode (tmpl-fav-item) da Simo/Cris -->
           <div>
-            <a data-bs-toggle="collapse" data-bs-target="#sidebar-favs-list" role="button">
-              <span class="ico"><ion-icon name="heart-outline"></ion-icon></span>
+            <a
+              data-bs-toggle="collapse"
+              data-bs-target="#sidebar-favs-list"
+              role="button"
+            >
+              <span class="ico"
+                ><ion-icon name="heart-outline"></ion-icon
+              ></span>
               <span>Preferiti</span>
             </a>
             <ul class="collapse" id="sidebar-favs-list">
-              <li><span class="dropdown-item text-secondary">Nessuno ancora</span></li>
+              <li>
+                <span class="dropdown-item text-secondary">Nessuno ancora</span>
+              </li>
             </ul>
           </div>
 
@@ -77,15 +91,24 @@
 
           <!-- Collapse Playlist — <li> popolati via cloneNode (tmpl-playlist-item) da Simo/Cris -->
           <div>
-            <a data-bs-toggle="collapse" data-bs-target="#sidebar-playlists-list" role="button">
-              <span class="ico"><ion-icon name="musical-notes-outline"></ion-icon></span>
+            <a
+              data-bs-toggle="collapse"
+              data-bs-target="#sidebar-playlists-list"
+              role="button"
+            >
+              <span class="ico"
+                ><ion-icon name="musical-notes-outline"></ion-icon
+              ></span>
               <span>Playlist</span>
             </a>
             <ul class="collapse" id="sidebar-playlists-list">
-              <li><span class="dropdown-item text-secondary">Nessuna playlist</span></li>
+              <li>
+                <span class="dropdown-item text-secondary"
+                  >Nessuna playlist</span
+                >
+              </li>
             </ul>
           </div>
-
         </nav>
       </aside>
 
@@ -189,19 +212,31 @@
             </a>
             <!-- cloneNode Simo/Cris — usa tmpl-fav-item definito nella sidebar -->
             <ul class="collapse" id="mobile-favs-list">
-              <li><span class="dropdown-item text-secondary">Nessuno ancora</span></li>
+              <li>
+                <span class="dropdown-item text-secondary">Nessuno ancora</span>
+              </li>
             </ul>
           </div>
 
           <!-- Collapse Playlist — <li> popolati via cloneNode da Simo/Cris -->
           <div>
-            <a data-bs-toggle="collapse" data-bs-target="#mobile-playlists-list" role="button">
-              <span class="ico"><ion-icon name="musical-notes-outline"></ion-icon></span>
+            <a
+              data-bs-toggle="collapse"
+              data-bs-target="#mobile-playlists-list"
+              role="button"
+            >
+              <span class="ico"
+                ><ion-icon name="musical-notes-outline"></ion-icon
+              ></span>
               <span>Playlist</span>
             </a>
             <!-- cloneNode Simo/Cris — usa tmpl-playlist-item definito nella sidebar -->
             <ul class="collapse" id="mobile-playlists-list">
-              <li><span class="dropdown-item text-secondary">Nessuna playlist</span></li>
+              <li>
+                <span class="dropdown-item text-secondary"
+                  >Nessuna playlist</span
+                >
+              </li>
             </ul>
           </div>
         </nav>
