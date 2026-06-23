@@ -352,27 +352,42 @@ class Player {
 */
 
 const getHistory = () => {
-  // TODO: leggi STORAGE_KEY_HISTORY, JSON.parse, ritorna array (vuoto se assente)
-  return [];
+  const raw = localStorage.getItem(STORAGE_KEY_HISTORY);
+  return raw ? JSON.parse(raw) : [];
 };
 
 const addToHistory = (track) => {
-  // TODO: array = getHistory(); rimuovi eventuale duplicato (per id);
-  //       metti track in testa; tronca a MAX_HISTORY; salva
+  const history = getHistory().filter((t) => t.id !== track.id);
+  history.unshift(track);
+
+  localStorage.setItem(
+    STORAGE_KEY_HISTORY,
+    JSON.stringify(history.slice(0, MAX_HISTORY))
+  );
 };
 
 const getFavourites = () => {
-  // TODO: come getHistory ma con STORAGE_KEY_FAVOURITES
-  return [];
+  const raw = localStorage.getItem(STORAGE_KEY_FAVOURITES);
+  return raw ? JSON.parse(raw) : [];
 };
 
 const isFavourite = (trackId) => {
-  // TODO: return getFavourites().some(t => t.id === trackId)
-  return false;
+  return getFavourites().some((t) => t.id === trackId);
 };
 
 const toggleFavourite = (track) => {
-  // TODO: se presente per id -> rimuovi; altrimenti aggiungi in testa; salva
+  const favourites = getFavourites();
+
+  const next = isFavourite(track.id)
+    ? favourites.filter((t) => t.id !== track.id)
+    : [track, ...favourites];
+
+  localStorage.setItem(
+    STORAGE_KEY_FAVOURITES,
+    JSON.stringify(next)
+  );
+
+  renderSidebarFavourites();
 };
 
 /* ============================ 6. Render sidebar ============================ */
@@ -412,6 +427,10 @@ const renderSidebar = (activePage) => {
 const initPage = (activePage) => {
   const player = new Player();
   player.mount();
+
   window.player = player;
+
+  renderSidebarFavourites();
+
   return player;
 };

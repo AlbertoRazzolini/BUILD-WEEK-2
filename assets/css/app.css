@@ -62,11 +62,11 @@ button {
 
 .app {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 1fr;
   grid-template-rows: 1fr 90px;
   grid-template-areas:
-    "sidebar main"
-    "player  player";
+    "main"
+    "player";
   height: 100vh;
 }
 
@@ -75,6 +75,7 @@ button {
   background: var(--bg-sidebar);
   padding: 24px 16px;
   overflow-y: auto;
+  display: none;
 }
 
 .main {
@@ -123,7 +124,8 @@ button {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 8px 12px;
+  justify-content: center;
+  padding: 10px 0;
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   font-weight: 600;
@@ -173,6 +175,13 @@ button {
   background: var(--bg-elev);
 }
 
+.brand-text,
+.sidebar-section-title,
+.sidebar-list,
+.sidebar-nav a span:not(.ico) {
+  display: none;
+}
+
 /* ============================ Topbar ============================ */
 
 .topbar {
@@ -184,20 +193,25 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 24px;
+  padding: 12px 24px;
 }
 .topbar-nav {
   display: flex;
   gap: 8px;
 }
 .nav-btn {
-  width: 32px;
-  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  aspect-ratio: 1 / 1;
   border-radius: 50%;
   border: none;
   background: rgba(0, 0, 0, 0.6);
   color: #fff;
-  font-size: 18px;
+  font-size: 25px;
   line-height: 1;
 }
 .user-pill {
@@ -218,7 +232,7 @@ button {
 }
 
 .row {
-  margin-top: 24px;
+  margin-top: 12px;
 }
 .row h2 {
   margin: 0 0 12px 0;
@@ -459,7 +473,7 @@ button {
 }
 .search-input {
   width: 100%;
-  max-width: 480px;
+  min-width: 250px;
   padding: 12px 16px;
   border-radius: 999px;
   border: none;
@@ -601,48 +615,45 @@ button {
   color: var(--text-secondary);
 }
 
-/* ============================ Responsive ============================ */
+/* ============================ Responsive (mobile-first) ============================ */
 
-@media (max-width: 800px) {
+/* Default (sotto i 576px): sidebar nascosta del tutto, si usa l'hamburger/offcanvas mobile */
+
+/* Da 576px: sidebar compatta a icone, niente testo (il "menu" pieno appare da 768px in su) */
+@media (min-width: 576px) {
   .app {
     grid-template-columns: 80px 1fr;
+    grid-template-areas:
+      "sidebar main"
+      "player  player";
   }
-  .brand-text,
-  .sidebar-section-title,
-  .sidebar-list,
-  .sidebar-nav a span:not(.ico) {
-    display: none;
+  .sidebar {
+    display: block;
   }
-  .sidebar-nav a {
-    justify-content: center;
-    padding: 10px 0;
-  }
-  .album-hero,
-  .artist-hero {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .album-cover {
-    width: 160px;
-    height: 160px;
+
+  #sidebar-favs-list,
+  #sidebar-playlists-list {
+    padding: 0 !important;
   }
 }
 
-@media (max-width: 540px) {
+/* Da 768px: sidebar piena con testo */
+@media (min-width: 768px) {
   .app {
-    grid-template-columns: 0 1fr;
+    grid-template-columns: 240px 1fr;
   }
-  .sidebar {
-    display: none;
+  .brand-text,
+  .sidebar-nav a span:not(.ico) {
+    display: inline;
   }
-  .player {
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+  .sidebar-section-title {
+    display: block;
   }
-  .player-right {
-    display: none;
+  .sidebar-list {
+    display: flex;
   }
-  .grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  .sidebar-nav a {
+    justify-content: flex-start;
+    padding: 8px 12px;
   }
 }
