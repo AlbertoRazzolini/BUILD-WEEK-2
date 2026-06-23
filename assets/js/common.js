@@ -310,10 +310,12 @@ const renderSidebar = (activePage) => {
 /*
   initPage(activePage)
   - Chiamata da home.js / search.js / album.js / artist.js
-  - Monta sidebar, monta player, restituisce il player per essere usato.
+  - Monta il player nel footer e lo restituisce per essere usato.
+  - renderSidebar() rimossa: la sidebar è ora statica in HTML su ogni pagina.
+    La classe "active" è hardcodata per pagina, i preferiti/playlist
+    vengono popolati via cloneNode da Simo/Cris direttamente sugli id HTML.
 */
 const initPage = (activePage) => {
-  renderSidebar(activePage);
   const player = new Player();
   player.mount();
   window.player = player;
