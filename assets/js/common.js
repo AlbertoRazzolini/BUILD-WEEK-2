@@ -427,7 +427,7 @@ localStorage.setItem(STORAGE_KEY_FAVOURITES, JSON.stringify(favourites));
 /*
   renderSidebar(activePage)
   - activePage: "home" | "search" | "library" (per evidenziare il link attivo)
-*/
+
 const renderSidebar = (activePage) => {
   const sidebar = document.querySelector(".sidebar");
   if (!sidebar) return;
@@ -445,7 +445,7 @@ const renderSidebar = (activePage) => {
   `;
   // TODO (opzionale): popola #sidebar-favs con i titoli dei preferiti
 };
-
+*/
 /* ============================ 7. Inizializzazione ============================ */
 
 /*
@@ -459,6 +459,10 @@ const renderSidebar = (activePage) => {
 const initPage = (activePage) => {
   const player = new Player();
   player.mount();
+
   window.player = player;
+
+  renderSidebarFavourites();
+
   return player;
 };

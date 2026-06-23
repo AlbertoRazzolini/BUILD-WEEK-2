@@ -12,8 +12,9 @@
         - "Suggerimenti hits"   (fetch search term=hits pop entity=song limit=12)
    3) Le tre fetch dei suggerimenti vanno in PARALLELO con Promise.all
    4) Ogni card è una Track: cover, titolo, artista, button play, button cuore (favourite)
-   5) Click card -> window.player.play(track)
-   6) Click cover senza play -> link a album.html?id=albumId (opzionale)
+   5) Click card (cover inclusa) -> window.player.play(track)
+      Niente link ad album.html qui: in questa pagina ogni card è un brano,
+      non un album.
 */
 
 const player = initPage("home");
@@ -56,8 +57,21 @@ const fetchTracksByTerm = async (term) => {
   }
 };
 // 2 FUNZIONE HOME fai un loadhgome ad ogni avvio di pagina
+const ROW_SECTION_IDS = [
+  "row-history",
+  "row-favourites",
+  "row-pop",
+  "row-rock",
+  "row-hits",
+];
+
 const loadHome = async () => {
   try {
+    // tutte le sezioni partono nascoste, renderRow le mostra solo se ha dati
+    ROW_SECTION_IDS.forEach((id) =>
+      document.getElementById(id)?.classList.add("d-none"),
+    );
+
     const historyTracks = typeof getHistory === "function" ? getHistory() : [];
     const favouriteTracks =
       typeof getFavourites === "function" ? getFavourites() : [];
@@ -85,23 +99,72 @@ const loadHome = async () => {
     home.innerHTML = `<p class="text-danger text-center p-4">Errore nel caricamento della pagina.</p>`;
   }
 };
-// 3 FUNZIONE PER LA RICERCA DA DARE A SIMO E CRI
-//da qui simo e cri dovrebbero riempire larray di tracks e ,
-// generare dalle variabili track.title , tarck.cover etc appenderle all HTML
-//e poi creare la gethistory per la cronologia e getfavourites per i preferiti
-const renderRow = (rowTitle, tracks) => {
-  console.log(`Dati pronti per la riga "${rowTitle}":`, tracks);
+// 3 RENDER DELLE CARD: clona #tmpl-card per ogni track e popola img/titolo/artista
+const ROW_IDS = {
+  "Riprodotti di recente": "row-history",
+  "I tuoi preferiti": "row-favourites",
+  "Suggerimenti pop": "row-pop",
+  "Suggerimenti rock": "row-rock",
+  "Suggerimenti hits": "row-hits",
 };
-//quando vai su invio chiama la mia prima funzione "fetchTracksByTerm" e passa a renderRow
+const tmplCard = document.getElementById("tmpl-card");
+
+const buildCard = (track) => {
+  const card = tmplCard.content.firstElementChild.cloneNode(true);
+
+  const img = card.querySelector("img");
+  img.src = track.cover;
+  img.alt = track.title;
+
+  card.querySelector(".card-title").textContent = track.title;
+  card.querySelector(".card-sub").textContent = track.artist;
+
+  const btnFav = card.querySelector(".card-fav");
+  btnFav.classList.toggle("is-fav", isFavourite(track.id));
+  btnFav.addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleFavourite(track);
+    btnFav.classList.toggle("is-fav", isFavourite(track.id));
+  });
+
+  card.querySelector(".card-play").addEventListener("click", (event) => {
+    event.stopPropagation();
+    window.player.play(track);
+  });
+
+  card.addEventListener("click", () => window.player.play(track));
+
+  return card;
+};
+
+const renderRow = (rowTitle, tracks) => {
+  const knownId = ROW_IDS[rowTitle];
+  let container;
+
+  if (knownId) {
+    const section = document.getElementById(knownId);
+    if (!section) return;
+    section.classList.remove("d-none");
+    container = section.querySelector(".d-flex");
+  } else {
+    const section = document.createElement("section");
+    section.className = "mb-5";
+    section.innerHTML = `<h2 class="fs-5 mb-3">${rowTitle}</h2><div class="d-flex gap-3 overflow-x-auto pb-2"></div>`;
+    home.appendChild(section);
+    container = section.querySelector(".d-flex");
+  }
+
+  container.replaceChildren(...tracks.map(buildCard));
+};
+// quando vai su invio salva il termine e vai alla pagina di ricerca dedicata
+// (search.js gestisce la ricerca vera con debounce, album e artisti)
 if (searchInput) {
-  searchInput.addEventListener("keypress", async (event) => {
+  searchInput.addEventListener("keypress", (event) => {
     if (event.key === "Enter") {
       const valoreCercato = event.target.value.trim();
       if (valoreCercato !== "") {
-        console.log(`Ricerca avviata per: ${valoreCercato}`);
-        home.innerHTML = `<h2 class="w-100 text-white p-3">Risultati per: "${valoreCercato}"</h2>`;
-        const risultati = await fetchTracksByTerm(valoreCercato);
-        renderRow("Canzoni trovate", risultati);
+        localStorage.setItem(STORAGE_KEY_LAST_SEARCH, valoreCercato);
+        window.location.href = "search.html";
       }
     }
   });
