@@ -248,71 +248,132 @@ class Player {
     const footer = document.querySelector(".player");
     if (!footer) return;
     //struttura spotify
-    footer.innerHTML = `
-      <div class="player-track">
-        <div class="player-cover"><img id="player-cover-img" alt="" /></div>
-        <div class="player-meta">
-          <p class="player-title" id="player-title">Seleziona un brano</p>
-          <p class="player-artist" id="player-artist">—</p>
-        </div>
-      </div>
 
-      <div class="player-center">
-        <div class="player-controls">
-          <button class="btn-ctrl" id="btn-shuffle" aria-label="Shuffle">⇄</button>
-          <button class="btn-ctrl" id="btn-prev"    aria-label="Precedente">⏮</button>
-          <button class="btn-play" id="btn-toggle"  aria-label="Play/Pausa">▶</button>
-          <button class="btn-ctrl" id="btn-next"    aria-label="Successivo">⏭</button>
-          <button class="btn-ctrl" id="btn-repeat"  aria-label="Ripeti">↻</button>
-        </div>
-        <div class="player-progress">
-          <span id="time-current">0:00</span>
-          <div class="progress-bar" id="progress-bar">
-            <div class="progress-fill" id="progress-fill"></div>
-          </div>
-          <span id="time-total">0:00</span>
-        </div>
-      </div>
+    const coverImg = document.createElement("img");
+    coverImg.id = "player-cover-img";
+    coverImg.alt = "";
+    const cover = document.createElement("div");
+    cover.className = "player-cover";
+    cover.appendChild(coverImg);
 
-      <div class="player-right">
-        <span>🔊</span>
-        <div class="volume-bar" id="volume-bar">
-          <div class="volume-fill" id="volume-fill" style="width: 80%"></div>
-        </div>
-      </div>
-    `;
+    const title = document.createElement("p");
+    title.className = "player-title";
+    title.id = "player-title";
+    title.textContent = "Seleziona un brano";
+
+    const artist = document.createElement("p");
+    artist.className = "player-artist";
+    artist.id = "player-artist";
+    artist.textContent = "—";
+
+    const meta = document.createElement("div");
+    meta.className = "player-meta";
+    meta.append(title, artist);
+
+    const track = document.createElement("div");
+    track.className = "player-track";
+    track.append(cover, meta);
+
+    const btnShuffle = document.createElement("button");
+    btnShuffle.className = "btn-ctrl";
+    btnShuffle.id = "btn-shuffle";
+    btnShuffle.setAttribute("aria-label", "Shuffle");
+    btnShuffle.textContent = "⇄";
+
+    const btnPrev = document.createElement("button");
+    btnPrev.className = "btn-ctrl";
+    btnPrev.id = "btn-prev";
+    btnPrev.setAttribute("aria-label", "Precedente");
+    btnPrev.textContent = "⏮";
+
+    const btnToggle = document.createElement("button");
+    btnToggle.className = "btn-play";
+    btnToggle.id = "btn-toggle";
+    btnToggle.setAttribute("aria-label", "Play/Pausa");
+    btnToggle.textContent = "▶";
+
+    const btnNext = document.createElement("button");
+    btnNext.className = "btn-ctrl";
+    btnNext.id = "btn-next";
+    btnNext.setAttribute("aria-label", "Successivo");
+    btnNext.textContent = "⏭";
+
+    const btnRepeat = document.createElement("button");
+    btnRepeat.className = "btn-ctrl";
+    btnRepeat.id = "btn-repeat";
+    btnRepeat.setAttribute("aria-label", "Ripeti");
+    btnRepeat.textContent = "↻";
+
+    const controls = document.createElement("div");
+    controls.className = "player-controls";
+    controls.append(btnShuffle, btnPrev, btnToggle, btnNext, btnRepeat);
+
+    const timeCurrent = document.createElement("span");
+    timeCurrent.id = "time-current";
+    timeCurrent.textContent = "0:00";
+
+    const progressFill = document.createElement("div");
+    progressFill.className = "progress-fill";
+    progressFill.id = "progress-fill";
+
+    const progressBar = document.createElement("div");
+    progressBar.className = "progress-bar";
+    progressBar.id = "progress-bar";
+    progressBar.appendChild(progressFill);
+
+    const timeTotal = document.createElement("span");
+    timeTotal.id = "time-total";
+    timeTotal.textContent = "0:00";
+
+    const progress = document.createElement("div");
+    progress.className = "player-progress";
+    progress.append(timeCurrent, progressBar, timeTotal);
+
+    const center = document.createElement("div");
+    center.className = "player-center";
+    center.append(controls, progress);
+
+    const volumeIcon = document.createElement("span");
+    volumeIcon.textContent = "🔊";
+
+    const volumeFill = document.createElement("div");
+    volumeFill.className = "volume-fill";
+    volumeFill.id = "volume-fill";
+    volumeFill.style.width = "80%";
+
+    const volumeBar = document.createElement("div");
+    volumeBar.className = "volume-bar";
+    volumeBar.id = "volume-bar";
+    volumeBar.appendChild(volumeFill);
+
+    const right = document.createElement("div");
+    right.className = "player-right";
+    right.append(volumeIcon, volumeBar);
+
+    footer.replaceChildren(track, center, right);
 
     if (this.audio) {//volume di defalut all 80 %
       this.audio.volume = 0.8;
     }
 
-    const btnToggle = document.getElementById("btn-toggle");
-    if (btnToggle) {//dai un listener al bottone play /pause
-      btnToggle.addEventListener("click", () => this.togglePlay());
-    }
+    btnToggle.addEventListener("click", () => this.togglePlay());//dai un listener al bottone play /pause
 
-    const progressBar = document.getElementById("progress-bar");
-    if (progressBar) {//listener per il click della barra del progresso della canzone
-      progressBar.addEventListener("click", (e) => {
-        if (!this.currentTrack || !this.audio.duration) return;
-        const rect = progressBar.getBoundingClientRect();//dammi le coordinate della barra
-        const clickX = e.clientX - rect.left;//calcola dove ho toccato esattamente
-        const width = rect.width;//larghezza totale barra
-        const percent = clickX / width;//trasforma il click in percentuale
-        this.seek(percent);//sposta la riproduzione a quella percentuale
-      });
-    }
-//listener della barra del volume
-    const volumeBar = document.getElementById("volume-bar");
-    if (volumeBar) {
-      volumeBar.addEventListener("click", (e) => {
-        const rect = volumeBar.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const width = rect.width;//sempre tra 0 e 1 massimo
-        const percent = Math.max(0, Math.min(1, clickX / width));
-        this.setVolume(percent);//applica il nuovo volume
-      });
-    }
+    progressBar.addEventListener("click", (e) => {//listener per il click della barra del progresso della canzone
+      if (!this.currentTrack || !this.audio.duration) return;
+      const rect = progressBar.getBoundingClientRect();//dammi le coordinate della barra
+      const clickX = e.clientX - rect.left;//calcola dove ho toccato esattamente
+      const width = rect.width;//larghezza totale barra
+      const percent = clickX / width;//trasforma il click in percentuale
+      this.seek(percent);//sposta la riproduzione a quella percentuale
+    });
+
+    volumeBar.addEventListener("click", (e) => {//listener della barra del volume
+      const rect = volumeBar.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const width = rect.width;//sempre tra 0 e 1 massimo
+      const percent = Math.max(0, Math.min(1, clickX / width));
+      this.setVolume(percent);//applica il nuovo volume
+    });
   }
 //ricevi il tarck di Apple e riproducilo
   play(track) {
@@ -395,7 +456,7 @@ const addToHistory = (track) => {
     history = history.slice(0, MAX_HISTORY);
   }
 
-  localStorage.setItem(STORAGE_KEY_FAVOURITES, JSON.stringify(history));
+  localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(history));
  
 };
   // TODO: come getHistory ma con STORAGE_KEY_FAVOURITES
@@ -418,11 +479,56 @@ const toggleFavourite = (track) => {
     favourites = favourites.filter(t => t.id !== track.id);
   }else{
     favourites.unshift(track);
+  }
+
+  localStorage.setItem(STORAGE_KEY_FAVOURITES, JSON.stringify(favourites));
+
+  renderSidebarFavourites();
 };
-localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(history));
-}
 
 /* ============================ 6. Render sidebar ============================ */
+
+/*
+  renderSidebarFavourites()
+  - Popola #sidebar-favs-list (desktop) e #mobile-favs-list (offcanvas mobile)
+    clonando #tmpl-fav-item per ciascun preferito.
+  - Se non ci sono preferiti, mostra il placeholder "Nessuno ancora".
+*/
+const renderSidebarFavourites = () => {
+  const tmplFav = document.getElementById("tmpl-fav-item");
+  const lists = document.querySelectorAll("#sidebar-favs-list, #mobile-favs-list");
+  if (!tmplFav || lists.length === 0) return;
+
+  const favourites = getFavourites();
+
+  const buildEmptyItem = () => {
+    const li = document.createElement("li");
+    const span = document.createElement("span");
+    span.className = "dropdown-item text-secondary";
+    span.textContent = "Nessuno ancora";
+    li.appendChild(span);
+    return li;
+  };
+
+  const buildFavItem = (track) => {
+    const item = tmplFav.content.firstElementChild.cloneNode(true);
+    const img = item.querySelector(".fav-cover");
+    img.src = track.cover;
+    img.alt = track.title;
+    item.querySelector(".fav-title").textContent = track.title;
+    item.querySelector(".fav-artist").textContent = track.artist;
+    item.addEventListener("click", () => {
+      if (window.player) window.player.play(track);
+    });
+    return item;
+  };
+
+  lists.forEach((list) => {
+    list.replaceChildren(
+      ...(favourites.length > 0 ? favourites.map(buildFavItem) : [buildEmptyItem()]),
+    );
+  });
+};
 
 /*
   renderSidebar(activePage)

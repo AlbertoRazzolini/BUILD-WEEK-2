@@ -38,7 +38,7 @@ const renderTrackCard = (track) => {
   const imageWrap = document.createElement("div");
   imageWrap.className = "card-image-wrap";
   const img = document.createElement("img");
-  img.src = track.cover;
+  img.src = bigArt(track.cover);
   img.alt = track.title;
   imageWrap.appendChild(img);
 
