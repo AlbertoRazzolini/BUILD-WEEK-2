@@ -387,7 +387,7 @@ const getHistory = () => {
 const addToHistory = (track) => {
   let history = getHistory();
 
-  history = history.filter(t = t.id !== track.id);
+  history = history.filter(t => t.id !== track.id);
 
   history.unshift(track);
 
@@ -419,7 +419,7 @@ const toggleFavourite = (track) => {
   }else{
     favourites.unshift(track);
 };
-localStorage.setItem(STORAGE_KEY_FAVOURITES, JSON.stringify(favourites));
+localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(history));
 }
 
 /* ============================ 6. Render sidebar ============================ */
