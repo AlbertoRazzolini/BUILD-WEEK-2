@@ -39,5 +39,3 @@ const loadHome = async () => {
 };
 
 loadHome();
-
-

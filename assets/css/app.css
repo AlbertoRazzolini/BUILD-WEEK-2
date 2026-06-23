@@ -16,9 +16,9 @@
   --text-primary: #ffffff;
   --text-secondary: #b3b3b3;
   --text-input: #000000;
-  --accent: #f7d800;        /* giallo Epicode */
+  --accent: #f7d800; /* giallo Epicode */
   --accent-dark: #d6ba00;
-  --success: #1ed760;       /* verde "play" */
+  --success: #1ed760; /* verde "play" */
   --danger: #e25555;
   --border: #2a2a2a;
   --radius-sm: 6px;
@@ -37,7 +37,9 @@ body {
   margin: 0;
   background: var(--bg-base);
   color: var(--text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
   font-size: 14px;
   overflow: hidden;
 }
@@ -50,6 +52,10 @@ a {
 button {
   font-family: inherit;
   cursor: pointer;
+}
+
+.user-pill {
+  color: white;
 }
 
 /* ============================ Layout 3 zone ============================ */
@@ -290,7 +296,9 @@ button {
   box-shadow: var(--shadow);
   opacity: 0;
   transform: translateY(8px);
-  transition: opacity 0.2s, transform 0.2s;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
 }
 .card:hover .card-play {
   opacity: 1;
