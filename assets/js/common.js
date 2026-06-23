@@ -352,28 +352,48 @@ class Player {
 */
 
 const getHistory = () => {
-  // TODO: leggi STORAGE_KEY_HISTORY, JSON.parse, ritorna array (vuoto se assente)
-  return [];
+  const historyData = localStorage.getItem(STORAGE_KEY_HISTORY);
+  return historyData ? JSON.parse(historyData) : [];
+
 };
 
 const addToHistory = (track) => {
-  // TODO: array = getHistory(); rimuovi eventuale duplicato (per id);
-  //       metti track in testa; tronca a MAX_HISTORY; salva
-};
+  let history = getHistory();
 
-const getFavourites = () => {
+  history = history.filter(t = t.id !== track.id);
+
+  history.unshift(track);
+
+  if(history.length > MAX_HISTORY) {
+    history = history.slice(0, MAX_HISTORY);
+  }
+
+  localStorage.setItem(STORAGE_KEY_FAVOURITES, JSON.stringify(history));
+ 
+};
   // TODO: come getHistory ma con STORAGE_KEY_FAVOURITES
-  return [];
-};
+const getFavourites = () => {
+  const favouritesData = localStorage.getItem(STORAGE_KEY_FAVOURITES);
+  return favouritesData ? JSON.parse(favouritesData) : [];
 
+  
+};
+// TODO: return getFavourites().some(t => t.id === trackId)
 const isFavourite = (trackId) => {
-  // TODO: return getFavourites().some(t => t.id === trackId)
-  return false;
+  return getFavourites().some(t => t.id === trackId);
 };
-
+// TODO: se presente per id -> rimuovi; altrimenti aggiungi in testa; salva
 const toggleFavourite = (track) => {
-  // TODO: se presente per id -> rimuovi; altrimenti aggiungi in testa; salva
+  let favourites = getFavourites();
+  const exists = favourites.some(t => t.id === track.id);
+
+  if(exists){
+    favourites = favourites.filter(t => t.id !== track.id);
+  }else{
+    favourites.unshift(track);
 };
+localStorage.setItem(STORAGE_KEY_FAVOURITES, JSON.stringify(favourites));
+}
 
 /* ============================ 6. Render sidebar ============================ */
 
