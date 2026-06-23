@@ -125,6 +125,33 @@ const debounce = (fn, ms) => {
   };
 };
 
+/* ============================ 2.5 Funzioni ========================== */
+
+
+const myFunction = () => {
+  const myButtons = document.querySelectorAll(".badge.bg-secondary");
+
+  if (myButtons.length > 0) {
+    myButtons.forEach((singleButton) => {
+      singleButton.addEventListener("click", (event) => {
+        const filtro = event.target.dataset.filter;
+
+        if (filtro === "artisti") {
+          alert("Cercando artisti...");
+      
+        } else if (filtro === "album") {
+          alert("Caricando albums...");
+         
+        } else if (filtro === "generi") { 
+          alert("Mostrando generi musicali...");
+          
+        }
+      });
+    });
+  }
+};
+
+myFunction();
 /* ============================ 3. Classi modello ============================ */
 
 /*
