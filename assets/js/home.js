@@ -26,16 +26,14 @@ const searchInput = document.getElementById("search-input");
 const API_URL = "https://itunes.apple.com/search";
 
 // 1 PRIMA FUNZIONA ASINCORNA
-const fetchTracksByTerm = async (term) => {
-  // gli do try catch per ridare errore all utente in caso di internet
-  //  non funzionante o server Apple in down
-  try {
-    const url = `${API_URL}?term=${encodeURIComponent(term)}&media=music&entity=song&limit=12`;
-    const response = await fetch(url);
-    if (!response.ok) {
+
+// gli do try catch per ridare errore all utente in caso di internet
+//  non funzionante o server Apple in down
+
+/*  if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
-    const data = await response.json();
+
 
     // uso un map per prendere tutti i dati disordinati che la API mi restituisce
     //e ne ricostruisco un array pulito con ID, tracks , artist ,
@@ -47,8 +45,13 @@ const fetchTracksByTerm = async (term) => {
       cover: track.artworkUrl100,
       audioUrl: track.previewUrl,
       albumId: track.collectionId,
-    }));
-    console.log(`Dati ricevuti per "${term}":`, tracks);
+    }));*/
+const fetchTracksByTerm = async (term) => {
+  try {
+    const url = `${API_URL}?term=${encodeURIComponent(term)}&media=music&entity=song&limit=12`;
+    const response = await fetch(url);
+    const data = await response.json();
+    const tracks = data.results.map((raw) => new Track(raw));
     return tracks;
   } catch (error) {
     console.error(`Errore nel fetch per "${term}":`, error);
@@ -56,6 +59,7 @@ const fetchTracksByTerm = async (term) => {
     return [];
   }
 };
+
 // 2 FUNZIONE HOME fai un loadhgome ad ogni avvio di pagina
 const ROW_SECTION_IDS = [
   "row-history",
@@ -96,7 +100,10 @@ const loadHome = async () => {
     if (hitsTracks.length > 0) renderRow("Suggerimenti hits", hitsTracks);
   } catch (globalError) {
     console.error("Errore critico nel loadHome:", globalError);
-    home.innerHTML = `<p class="text-danger text-center p-4">Errore nel caricamento della pagina.</p>`;
+    const errorMsg = document.createElement("p");
+    errorMsg.className = "text-danger text-center p-4";
+    errorMsg.textContent = "Errore nel caricamento della pagina.";
+    home.replaceChildren(errorMsg);
   }
 };
 // 3 RENDER DELLE CARD: clona #tmpl-card per ogni track e popola img/titolo/artista
@@ -147,11 +154,19 @@ const renderRow = (rowTitle, tracks) => {
     section.classList.remove("d-none");
     container = section.querySelector(".d-flex");
   } else {
+    const heading = document.createElement("h2");
+    heading.className = "fs-5 mb-3";
+    heading.textContent = rowTitle;
+
+    const list = document.createElement("div");
+    list.className = "d-flex gap-3 overflow-x-auto pb-2";
+
     const section = document.createElement("section");
     section.className = "mb-5";
-    section.innerHTML = `<h2 class="fs-5 mb-3">${rowTitle}</h2><div class="d-flex gap-3 overflow-x-auto pb-2"></div>`;
+    section.append(heading, list);
+
     home.appendChild(section);
-    container = section.querySelector(".d-flex");
+    container = list;
   }
 
   container.replaceChildren(...tracks.map(buildCard));
