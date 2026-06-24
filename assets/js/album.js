@@ -55,9 +55,14 @@ const renderHero = (album, firstTrack) => {
   title.classList.add("hero-title");
   title.textContent = album.title;
 
+  // nome artista come <a> separato per navigare su artist.html senza innerHTML
+  const artistLink = document.createElement("a");
+  artistLink.textContent = album.artist;
+  artistLink.href = `artist.html?id=${album.artistId}`;
+
   const sub = document.createElement("p");
-  sub.classList.add("hero-sub");
-  sub.textContent = `${album.artist} · ${year} · ${album.trackCount} brani · ${formatTime(totalMs)}`;
+  sub.className = "hero-sub";
+  sub.append(artistLink, ` · ${year} · ${album.trackCount} brani · ${formatTime(totalMs)}`);
 
   const btnPlay = document.createElement("button");
   btnPlay.classList.add("btn-play-big");
@@ -111,10 +116,13 @@ const renderTracklist = (tracks) => {
       btnFav.classList.toggle("is-fav", isFavourite(track.id));
     });
 
+    // qui metto il mio "+" sulla riga per aggiungere il brano a una playlist
+    const btnAdd = makeAddButton(track, "track-add");
+
     const row = document.createElement("div");
     row.classList.add("track-row");
     row.dataset.id = track.id;
-    row.append(num, trackTitle, time, btnFav);
+    row.append(num, trackTitle, time, btnFav, btnAdd);
     row.addEventListener("click", () => player.play(track, tracks)); // MARCO- aggiunto ,tracks
 
     return row;

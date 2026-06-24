@@ -61,7 +61,10 @@
 const API_BASE = "https://itunes.apple.com";
 const STORAGE_KEY_HISTORY = "epitunes_history";
 const STORAGE_KEY_FAVOURITES = "epitunes_favourites";
+const STORAGE_KEY_PLAYLIST = "epitunes_playlist"; // singola playlist (migrazione) — Lucio legge questa chiave per i container playlist
+const STORAGE_KEY_PLAYLISTS = "epitunes_playlists"; // playlist multiple con nome — struttura: [{id, name, tracks}]
 const STORAGE_KEY_LAST_SEARCH = "epitunes_last_search";
+const STORAGE_KEY_VOLUME = "epitunes_volume"; // volume salvato tra sessioni (Cris)
 const MAX_HISTORY = 12;
 
 /* ============================ 2. Helpers ============================ */
@@ -80,14 +83,13 @@ const fetchJSON = async (url) => {
     }
     return await response.json();
   } catch (error) {
-    console.error("fetchJSON ha fallito:", error)
+    console.error("fetchJSON ha fallito:", error);
   }
   return { results: [], resultCount: 0 };
 };
-  // TODO: implementare con try/catch + await response.json()
-  // - Se response.ok è false, lancia un Error
-  // - Se la chiamata fallisce per rete, ritorna oggetto vuoto e logga l'errore
-  
+// TODO: implementare con try/catch + await response.json()
+// - Se response.ok è false, lancia un Error
+// - Se la chiamata fallisce per rete, ritorna oggetto vuoto e logga l'errore
 
 /*
   bigArt(url)
@@ -126,7 +128,6 @@ const debounce = (fn, ms) => {
 };
 
 /* ============================ 2.5 Funzioni ========================== */
-
 
 // qui gestisco i miei badge filtro: invece di cercare su iTunes,
 // faccio vedere i miei preferiti salvati divisi per tipo.
@@ -177,12 +178,11 @@ const myFunction = () => {
             mapaArtistas.set(track.artistId, {
               id: track.artistId,
               title: track.artist,
-              cover: track.cover // MARCO - aggiungo track.cover per selezionare anche l'immagine 
+              cover: track.cover, // MARCO - aggiungo track.cover per selezionare anche l'immagine
             });
           }
         });
         renderResultados([...mapaArtistas.values()], "artisti");
-
       } else if (filtro === "album") {
         // stessa cosa per gli album: uno solo per ogni albumId
         const mapaAlbums = new Map();
@@ -197,7 +197,6 @@ const myFunction = () => {
           }
         });
         renderResultados([...mapaAlbums.values()], "album");
-
       } else if (filtro === "generi") {
         // raggruppo per genere: un genere solo anche se ho più brani uguali
         const mapaGeneros = new Map();
@@ -229,7 +228,7 @@ const renderResultados = (lista, tipo) => {
     tmpl = document.getElementById("tmpl-filter-result");
   }
   if (!tmpl) return;
-   //skibidi
+  //skibidi
   // per ogni elemento clono il template e ci metto dentro i suoi dati
   const buildItem = (elemento) => {
     const item = tmpl.content.firstElementChild.cloneNode(true);
@@ -251,7 +250,7 @@ const renderResultados = (lista, tipo) => {
       // if (img) img.alt = elemento.title;
       if (img) {
         // MARCO - così facendo diciamo all'immagine quale foto caricare
-        img.src = elemento.cover || "https://placehold.co/40x40"; 
+        img.src = elemento.cover || "https://placehold.co/40x40";
         img.alt = elemento.title;
       }
       item.querySelector(".artist-name").textContent = elemento.title;
@@ -287,33 +286,34 @@ class Track {
   constructor(raw) {
     this.id = raw.trackId; //ID
     this.title = raw.trackName; //nome traccia
-    this.artist = raw.artistName;//nome artista
-    this.album = raw.collectionName;//nome album
-    this.albumId = raw.collectionId;//ID album
-    this.artistId = raw.artistId;//ID artista
-    this.cover = raw.artworkUrl100;//link immagine copertina
-    this.previewUrl = raw.previewUrl;//link streaming di 30 secondi
-    this.durationMs = raw.trackTimeMillis;//durata in millisecondi
-    this.genre = raw.primaryGenreName;//genere del brano (mi serve per il filtro Generi)
+    this.artist = raw.artistName; //nome artista
+    this.album = raw.collectionName; //nome album
+    this.albumId = raw.collectionId; //ID album
+    this.artistId = raw.artistId; //ID artista
+    this.cover = raw.artworkUrl100; //link immagine copertina
+    this.previewUrl = raw.previewUrl; //link streaming di 30 secondi
+    this.durationMs = raw.trackTimeMillis; //durata in millisecondi
+    this.genre = raw.primaryGenreName; //genere del brano (mi serve per il filtro Generi)
   }
 }
 
 class Album {
   constructor(raw) {
-    this.id = raw.collectionId;//ID album
-    this.title = raw.collectionName;//nome album
-    this.artist = raw.artistName;//chi è l'artista
-    this.cover = raw.artworkUrl100;//cover album
-    this.releaseDate = raw.releaseDate;//data di uscita
-    this.trackCount = raw.trackCount;//numero di tracce incluse
+    this.id = raw.collectionId; //ID album
+    this.title = raw.collectionName; //nome album
+    this.artist = raw.artistName; //chi è l'artista
+    this.artistId = raw.artistId; //ID artista (per link pagina artista)
+    this.cover = raw.artworkUrl100; //cover album
+    this.releaseDate = raw.releaseDate; //data di uscita
+    this.trackCount = raw.trackCount; //numero di tracce incluse
   }
 }
 
 class Artist {
   constructor(raw) {
-    this.id = raw.artistId;//ID artista
-    this.name = raw.artistName;//nome artista
-    this.genre = raw.primaryGenreName;//genere musicale di questa traccia
+    this.id = raw.artistId; //ID artista
+    this.name = raw.artistName; //nome artista
+    this.genre = raw.primaryGenreName; //genere musicale di questa traccia
   }
 }
 
@@ -340,22 +340,42 @@ class Artist {
 */
 class Player {
   constructor() {
-    // Sicurezza: se non c'è l'elemento audio nell'HTML, lo crea automaticamente
-    this.audio = document.querySelector("#audio-element");
-    if (!this.audio) {
-      this.audio = document.createElement("audio");
-      this.audio.id = "audio-element";
-      document.body.appendChild(this.audio);
+    this.audio = document.querySelector("#audio-element"); //recupera tag audio a riga circa 225
+    this.currentTrack = null; //brano iniziale : nessuno
+    this.isPlaying = false; //riproduzione iniziale : nessuno
+
+    if (this.audio) {
+      //attivalo durante tutta la durata del brano
+      this.audio.addEventListener("timeupdate", () => {
+        if (!this.audio.duration) return; //non attivarti se non ce nessun branp
+        const currentEl = document.getElementById("time-current"); //seleziona testo tempo corrente a sinistra
+        const fillEl = document.getElementById("progress-fill"); //seleziona barra progresso
+        if (currentEl) {
+          //trasforma il vero tempo in formato da spotify
+          currentEl.textContent = formatTime(this.audio.currentTime * 1000);
+        }
+        if (fillEl) {
+          //ascolta il vero avanzamento del brano e riempi la barra progresso
+          const percent = (this.audio.currentTime / this.audio.duration) * 100;
+          fillEl.style.width = `${percent}%`;
+        }
+      });
+      //cosa succede qudnado il brano finisce
+      this.audio.addEventListener("ended", () => {
+        this.isPlaying = false; //non in riproduzione
+        const btnToggle = document.getElementById("btn-toggle"); //prendi il pulsante play
+        if (btnToggle) btnToggle.textContent = "▶"; //rimetti icona play al posto di pausa
+      });
     }
 
     this.currentTrack = null;
     this.isPlaying = false;
-    
+
     // Stato per Shuffle e Repeat
-    this.currentTracklist = []; 
-    this.isShuffle = false;     
-    this.isRepeat = false;      
-    this.shufflePool = [];      
+    this.currentTracklist = [];
+    this.isShuffle = false;
+    this.isRepeat = false;
+    this.shufflePool = [];
 
     // Listener per aggiornare la barra del tempo
     this.audio.addEventListener("timeupdate", () => {
@@ -382,7 +402,7 @@ class Player {
       }
     });
   }
-
+  //TUTTO L'HTML CHE CI SERVE NEL NOSTRO PLAYER/FOOTER
   mount() {
     const footer = document.querySelector(".player");
     if (!footer) return;
@@ -395,13 +415,14 @@ class Player {
     cover.classList.add("player-cover");
     cover.appendChild(coverImg);
 
-    const title = document.createElement("p");
-    title.classList.add("player-title");
+    // <a> invece di <p>: play() imposta href verso album.html / artist.html al cambio brano
+    const title = document.createElement("a");
+    title.className = "player-title";
     title.id = "player-title";
     title.textContent = "Seleziona un brano";
 
-    const artist = document.createElement("p");
-    artist.classList.add("player-artist");
+    const artist = document.createElement("a");
+    artist.className = "player-artist";
     artist.id = "player-artist";
     artist.textContent = "—";
 
@@ -492,44 +513,42 @@ class Player {
     footer.replaceChildren(track, center, right);
 
     if (this.audio) {
-      this.audio.volume = 0.8;
+      const savedVolume = parseFloat(localStorage.getItem(STORAGE_KEY_VOLUME));
+      const initialVolume = Number.isNaN(savedVolume)
+        ? 0.5
+        : Math.max(0, Math.min(1, savedVolume));
+      this.setVolume(initialVolume);
     }
 
-    // --- LISTENER PULSANTI ---
-    btnToggle.addEventListener("click", () => this.togglePlay());
-    btnShuffle.addEventListener("click", () => this.toggleShuffle());
-    btnRepeat.addEventListener("click", () => this.toggleRepeat());
-    btnNext.addEventListener("click", () => this.next());
-    btnPrev.addEventListener("click", () => this.prev());
+    btnToggle.addEventListener("click", () => this.togglePlay()); //dai un listener al bottone play /pause
 
     progressBar.addEventListener("click", (e) => {
+      //listener per il click della barra del progresso della canzone
       if (!this.currentTrack || !this.audio.duration) return;
-      const rect = progressBar.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const width = rect.width;
-      const percent = clickX / width;
-      this.seek(percent);
+      const rect = progressBar.getBoundingClientRect(); //dammi le coordinate della barra
+      const clickX = e.clientX - rect.left; //calcola dove ho toccato esattamente
+      const width = rect.width; //larghezza totale barra
+      const percent = clickX / width; //trasforma il click in percentuale
+      this.seek(percent); //sposta la riproduzione a quella percentuale
     });
 
     volumeBar.addEventListener("click", (e) => {
+      //listener della barra del volume
       const rect = volumeBar.getBoundingClientRect();
       const clickX = e.clientX - rect.left;
-      const width = rect.width;
+      const width = rect.width; //sempre tra 0 e 1 massimo
       const percent = Math.max(0, Math.min(1, clickX / width));
-      this.setVolume(percent);
+      this.setVolume(percent); //applica il nuovo volume
     });
   }
-
-  play(track, tracklist = []) {
+  //ricevi il tarck di Apple e riproducilo
+  play(track) {
     if (!track || !track.previewUrl) return;
     this.currentTrack = track;
     this.audio.src = track.previewUrl;
     this.audio.play();
     this.isPlaying = true;
-
-    this.currentTracklist = tracklist.length > 0 ? tracklist : [track];
-    this.shufflePool = this.shufflePool.filter(id => id !== track.id);
-
+    //aggiorna tutta linterfaccia del footer con i nuovi dati del API della canzone da ascoltare
     const coverImg = document.getElementById("player-cover-img");
     const titleEl = document.getElementById("player-title");
     const artistEl = document.getElementById("player-artist");
@@ -537,8 +556,14 @@ class Player {
     const btnToggle = document.getElementById("btn-toggle");
 
     if (coverImg) coverImg.src = track.cover;
-    if (titleEl) titleEl.textContent = track.title;
-    if (artistEl) artistEl.textContent = track.artist;
+    if (titleEl) {
+      titleEl.textContent = track.title;
+      titleEl.href = `album.html?id=${track.albumId}`; // titolo footer → pagina album
+    }
+    if (artistEl) {
+      artistEl.textContent = track.artist;
+      artistEl.href = `artist.html?id=${track.artistId}`; // artista footer → pagina artista
+    }
     if (totalEl) totalEl.textContent = formatTime(track.durationMs);
     if (btnToggle) btnToggle.textContent = "⏸";
 
@@ -546,12 +571,12 @@ class Player {
       addToHistory(track);
     }
   }
-
+  //comportamento del toggle delbottone play /pause
   togglePlay() {
     // Se non c'è nessuna canzone caricata, non fa nulla
     if (!this.currentTrack) return;
     const btnToggle = document.getElementById("btn-toggle");
-    
+
     if (this.isPlaying) {
       this.audio.pause();
       this.isPlaying = false;
@@ -562,7 +587,7 @@ class Player {
       if (btnToggle) btnToggle.textContent = "⏸";
     }
   }
-
+  //regola volume sempre tran 0 e 1
   setVolume(v) {
     if (!this.audio) return;
     this.audio.volume = v;
@@ -570,6 +595,7 @@ class Player {
     if (volumeFill) {
       volumeFill.style.width = `${v * 100}%`;
     }
+    localStorage.setItem(STORAGE_KEY_VOLUME, v.toString());
   }
 
   seek(percent) {
@@ -580,25 +606,25 @@ class Player {
   toggleShuffle() {
     this.isShuffle = !this.isShuffle;
     const btn = document.getElementById("btn-shuffle");
-    if (btn) btn.style.color = this.isShuffle ? "#1db954" : ""; 
+    if (btn) btn.style.color = this.isShuffle ? "#1db954" : "";
     if (this.isShuffle) this.initShufflePool();
   }
 
   toggleRepeat() {
     this.isRepeat = !this.isRepeat;
     if (this.audio) {
-      this.audio.loop = this.isRepeat; 
+      this.audio.loop = this.isRepeat;
     }
     const btn = document.getElementById("btn-repeat");
     if (btn) {
-      btn.style.color = this.isRepeat ? "#1db954" : ""; 
+      btn.style.color = this.isRepeat ? "#1db954" : "";
     }
   }
 
   initShufflePool() {
     this.shufflePool = this.currentTracklist
-      .map(t => t.id)
-      .filter(id => id !== (this.currentTrack ? this.currentTrack.id : null));
+      .map((t) => t.id)
+      .filter((id) => id !== (this.currentTrack ? this.currentTrack.id : null));
   }
 
   next() {
@@ -619,10 +645,12 @@ class Player {
       const nextTrackId = this.shufflePool[randomIndex];
       this.shufflePool.splice(randomIndex, 1);
 
-      const nextTrack = this.currentTracklist.find(t => t.id === nextTrackId);
+      const nextTrack = this.currentTracklist.find((t) => t.id === nextTrackId);
       if (nextTrack) this.play(nextTrack, this.currentTracklist);
     } else {
-      const currentIndex = this.currentTracklist.findIndex(t => t.id === this.currentTrack.id);
+      const currentIndex = this.currentTracklist.findIndex(
+        (t) => t.id === this.currentTrack.id,
+      );
       const nextIndex = (currentIndex + 1) % this.currentTracklist.length;
       this.play(this.currentTracklist[nextIndex], this.currentTracklist);
     }
@@ -633,8 +661,12 @@ class Player {
       this.seek(0);
       return;
     }
-    const currentIndex = this.currentTracklist.findIndex(t => t.id === this.currentTrack.id);
-    const prevIndex = (currentIndex - 1 + this.currentTracklist.length) % this.currentTracklist.length;
+    const currentIndex = this.currentTracklist.findIndex(
+      (t) => t.id === this.currentTrack.id,
+    );
+    const prevIndex =
+      (currentIndex - 1 + this.currentTracklist.length) %
+      this.currentTracklist.length;
     this.play(this.currentTracklist[prevIndex], this.currentTracklist);
   }
 }
@@ -652,48 +684,160 @@ class Player {
 const getHistory = () => {
   const historyData = localStorage.getItem(STORAGE_KEY_HISTORY);
   return historyData ? JSON.parse(historyData) : [];
-
 };
 
 const addToHistory = (track) => {
   let history = getHistory();
 
-  history = history.filter(t => t.id !== track.id);
+  history = history.filter((t) => t.id !== track.id);
 
   history.unshift(track);
 
-  if(history.length > MAX_HISTORY) {
+  if (history.length > MAX_HISTORY) {
     history = history.slice(0, MAX_HISTORY);
   }
 
   localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(history));
- 
 };
-  // TODO: come getHistory ma con STORAGE_KEY_FAVOURITES
+// TODO: come getHistory ma con STORAGE_KEY_FAVOURITES
 const getFavourites = () => {
   const favouritesData = localStorage.getItem(STORAGE_KEY_FAVOURITES);
   return favouritesData ? JSON.parse(favouritesData) : [];
-
-  
 };
 // TODO: return getFavourites().some(t => t.id === trackId)
 const isFavourite = (trackId) => {
-  return getFavourites().some(t => t.id === trackId);
+  return getFavourites().some((t) => t.id === trackId);
 };
 // TODO: se presente per id -> rimuovi; altrimenti aggiungi in testa; salva
 const toggleFavourite = (track) => {
   let favourites = getFavourites();
-  const exists = favourites.some(t => t.id === track.id);
+  const exists = favourites.some((t) => t.id === track.id);
 
-  if(exists){
-    favourites = favourites.filter(t => t.id !== track.id);
-  }else{
+  if (exists) {
+    favourites = favourites.filter((t) => t.id !== track.id);
+  } else {
     favourites.unshift(track);
   }
 
   localStorage.setItem(STORAGE_KEY_FAVOURITES, JSON.stringify(favourites));
 
   renderSidebarFavourites();
+};
+
+// Helper playlist — stessa struttura dei preferiti.
+// Lucio usa getPlaylist() per costruire i container "La tua playlist".
+// Il bottone di aggiunta è implementato da Lucio; questi helper sono condivisi.
+const getPlaylist = () => {
+  const data = localStorage.getItem(STORAGE_KEY_PLAYLIST);
+  return data ? JSON.parse(data) : [];
+};
+
+const isInPlaylist = (trackId) => {
+  return getPlaylist().some((t) => t.id === trackId);
+};
+
+const togglePlaylist = (track) => {
+  let playlist = getPlaylist();
+  const exists = playlist.some((t) => t.id === track.id);
+  if (exists) {
+    playlist = playlist.filter((t) => t.id !== track.id);
+  } else {
+    playlist.unshift(track);
+  }
+  localStorage.setItem(STORAGE_KEY_PLAYLIST, JSON.stringify(playlist));
+};
+
+/* ============================ 5.5 Playlist multiple ============================ */
+
+// ID speciale che identifica la sezione "Brani che ti piacciono" (i preferiti come playlist)
+const PLAYLIST_FAVOURITES = "favourites";
+
+// Restituisce tutte le playlist salvate: [{id, name, tracks}]
+const getPlaylists = () => {
+  const data = localStorage.getItem(STORAGE_KEY_PLAYLISTS);
+  return data ? JSON.parse(data) : [];
+};
+
+const getPlaylistById = (id) => {
+  return getPlaylists().find((p) => p.id === id) || null;
+};
+
+const deletePlaylist = (id) => {
+  const updated = getPlaylists().filter((p) => p.id !== id);
+  localStorage.setItem(STORAGE_KEY_PLAYLISTS, JSON.stringify(updated));
+  renderSidebarPlaylists();
+};
+
+// Aggiunge o rimuove un brano da una playlist specifica
+const toggleTrackInPlaylist = (playlistId, track) => {
+  const playlists = getPlaylists();
+  const pl = playlists.find((p) => p.id === playlistId);
+  if (!pl) return;
+  const exists = pl.tracks.some((t) => t.id === track.id);
+  if (exists) {
+    pl.tracks = pl.tracks.filter((t) => t.id !== track.id);
+  } else {
+    pl.tracks.unshift(track);
+  }
+  localStorage.setItem(STORAGE_KEY_PLAYLISTS, JSON.stringify(playlists));
+  renderSidebarPlaylists();
+};
+
+// Crea una nuova playlist vuota con ID univoco basato sul timestamp
+const createPlaylist = (name) => {
+  const playlists = getPlaylists();
+  const newPlaylist = { id: `pl_${Date.now()}`, name, tracks: [] };
+  playlists.push(newPlaylist);
+  localStorage.setItem(STORAGE_KEY_PLAYLISTS, JSON.stringify(playlists));
+  renderSidebarPlaylists();
+  return newPlaylist;
+};
+
+// Migra i brani della vecchia chiave singola alle playlist multiple (eseguita una sola volta)
+const migrateOldPlaylist = () => {
+  const old = localStorage.getItem(STORAGE_KEY_PLAYLIST);
+  if (!old) return;
+  const tracks = JSON.parse(old);
+  if (!Array.isArray(tracks) || tracks.length === 0) return;
+  const existing = getPlaylists();
+  if (existing.some((p) => p.id === "migrated")) return;
+  existing.push({ id: "migrated", name: "La tua playlist", tracks });
+  localStorage.setItem(STORAGE_KEY_PLAYLISTS, JSON.stringify(existing));
+  localStorage.removeItem(STORAGE_KEY_PLAYLIST);
+  renderSidebarPlaylists();
+};
+
+// Bottone "+" per aggiungere un brano a una playlist — classe CSS passata come parametro
+const makeAddButton = (track, className) => {
+  const btn = document.createElement("button");
+  btn.className = className;
+  btn.setAttribute("aria-label", "Aggiungi a playlist");
+  btn.textContent = "+";
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const playlists = getPlaylists();
+    let targetPlaylist;
+    if (playlists.length === 0) {
+      const name = prompt("Nessuna playlist. Dai un nome alla nuova:");
+      if (!name) return;
+      targetPlaylist = createPlaylist(name);
+    } else {
+      const names = playlists.map((p, i) => `${i + 1}. ${p.name}`).join("\n");
+      const choice = prompt(`Aggiungi "${track.title}" a:\n${names}\n\n0. Crea nuova playlist`);
+      if (choice === null) return;
+      if (choice === "0") {
+        const name = prompt("Nome della nuova playlist:");
+        if (!name) return;
+        targetPlaylist = createPlaylist(name);
+      } else {
+        const idx = parseInt(choice) - 1;
+        if (isNaN(idx) || idx < 0 || idx >= playlists.length) return;
+        targetPlaylist = playlists[idx];
+      }
+    }
+    toggleTrackInPlaylist(targetPlaylist.id, track);
+  });
+  return btn;
 };
 
 /* ============================ 6. Render sidebar ============================ */
@@ -706,7 +850,9 @@ const toggleFavourite = (track) => {
 */
 const renderSidebarFavourites = () => {
   const tmplFav = document.getElementById("tmpl-fav-item");
-  const lists = document.querySelectorAll("#sidebar-favs-list, #mobile-favs-list");
+  const lists = document.querySelectorAll(
+    "#sidebar-favs-list, #mobile-favs-list",
+  );
   if (!tmplFav || lists.length === 0) return;
 
   const favourites = getFavourites();
@@ -736,8 +882,56 @@ const renderSidebarFavourites = () => {
 
   lists.forEach((list) => {
     list.replaceChildren(
-      ...(favourites.length > 0 ? favourites.map(buildFavItem) : [buildEmptyItem()]),
+      ...(favourites.length > 0
+        ? favourites.map(buildFavItem)
+        : [buildEmptyItem()]),
     );
+  });
+};
+
+// Popola #sidebar-playlists-list e #mobile-playlists-list con le playlist dell'utente
+const renderSidebarPlaylists = () => {
+  const tmplPlaylist = document.getElementById("tmpl-playlist-item");
+  const lists = document.querySelectorAll(
+    "#sidebar-playlists-list, #mobile-playlists-list",
+  );
+  if (!tmplPlaylist || lists.length === 0) return;
+
+  const playlists = getPlaylists();
+
+  const buildEmptyItem = () => {
+    const li = document.createElement("li");
+    const span = document.createElement("span");
+    span.className = "dropdown-item text-secondary";
+    span.textContent = "Nessuna playlist";
+    li.appendChild(span);
+    return li;
+  };
+
+  // voce speciale "Brani che ti piacciono" — punta ai preferiti come playlist
+  const buildFavouritesItem = () => {
+    const item = tmplPlaylist.content.firstElementChild.cloneNode(true);
+    item.querySelector(".playlist-name").textContent = "Brani che ti piacciono";
+    item.style.cursor = "pointer";
+    item.addEventListener("click", () => {
+      window.location.href = `playlist.html?id=${PLAYLIST_FAVOURITES}`;
+    });
+    return item;
+  };
+
+  const buildPlaylistItem = (playlist) => {
+    const item = tmplPlaylist.content.firstElementChild.cloneNode(true);
+    item.querySelector(".playlist-name").textContent = playlist.name;
+    item.style.cursor = "pointer";
+    item.addEventListener("click", () => {
+      window.location.href = `playlist.html?id=${playlist.id}`;
+    });
+    return item;
+  };
+
+  lists.forEach((list) => {
+    const items = [buildFavouritesItem(), ...playlists.map(buildPlaylistItem)];
+    list.replaceChildren(...(playlists.length > 0 ? items : [buildFavouritesItem(), buildEmptyItem()]));
   });
 };
 
@@ -779,11 +973,12 @@ const initPage = (activePage) => {
 
   window.player = player;
 
+  migrateOldPlaylist();
   renderSidebarFavourites();
+  renderSidebarPlaylists();
 
   // attivo i miei badge filtro (altrimenti i bottoni non fanno niente)
   myFunction();
 
   return player;
 };
-
