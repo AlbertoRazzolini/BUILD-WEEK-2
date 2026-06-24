@@ -868,6 +868,7 @@ const renderSidebarFavourites = () => {
 
   const buildFavItem = (track) => {
     const item = tmplFav.content.firstElementChild.cloneNode(true);
+    item.classList.add("cursor-pointer");
     const img = item.querySelector(".fav-cover");
     img.src = track.cover;
     img.alt = track.title;

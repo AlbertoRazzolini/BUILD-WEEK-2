@@ -49,7 +49,7 @@ const API_URL = "https://itunes.apple.com/search";
 const fetchTracksByTerm = async (term, genre, country) => {
   try {
     const countryParam = country ? `&country=${country}` : "";
-    const url = `${API_URL}?term=${encodeURIComponent(term)}&media=music&entity=song&limit=20${countryParam}`;
+    const url = `${API_URL}?term=${encodeURIComponent(term)}&media=music&entity=song&limit=50${countryParam}`;
     const response = await fetch(url);
     const data = await response.json();
     const results = genre
