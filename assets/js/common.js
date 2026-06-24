@@ -89,9 +89,6 @@ const fetchJSON = async (url) => {
   }
   return { results: [], resultCount: 0 };
 };
-// TODO: implementare con try/catch + await response.json()
-// - Se response.ok è false, lancia un Error
-// - Se la chiamata fallisce per rete, ritorna oggetto vuoto e logga l'errore
 
 /*
   bigArt(url)
@@ -238,7 +235,7 @@ const renderResultados = (lista, tipo) => {
     if (tipo === "album") {
       const img = item.querySelector(".album-cover");
       if (img) {
-        img.src = elemento.cover || "https://placehold.co/40x40";
+        img.src = elemento.cover || "";
         img.alt = elemento.title;
       }
       item.querySelector(".album-title").textContent = elemento.title;
@@ -252,7 +249,7 @@ const renderResultados = (lista, tipo) => {
       // if (img) img.alt = elemento.title;
       if (img) {
         // MARCO - così facendo diciamo all'immagine quale foto caricare
-        img.src = elemento.cover || "https://placehold.co/40x40";
+        img.src = elemento.cover || "";
         img.alt = elemento.title;
       }
       item.querySelector(".artist-name").textContent = elemento.title;
