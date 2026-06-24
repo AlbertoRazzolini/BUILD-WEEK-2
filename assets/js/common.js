@@ -228,7 +228,7 @@ const renderResultados = (lista, tipo) => {
     tmpl = document.getElementById("tmpl-filter-result");
   }
   if (!tmpl) return;
-
+   //skibidi
   // per ogni elemento clono il template e ci metto dentro i suoi dati
   const buildItem = (elemento) => {
     const item = tmpl.content.firstElementChild.cloneNode(true);
@@ -455,7 +455,7 @@ class Player {
     const volumeFill = document.createElement("div");
     volumeFill.className = "volume-fill";
     volumeFill.id = "volume-fill";
-    volumeFill.style.width = "80%";
+    volumeFill.style.width = "50%";
 
     const volumeBar = document.createElement("div");
     volumeBar.className = "volume-bar";
@@ -468,8 +468,8 @@ class Player {
 
     footer.replaceChildren(track, center, right);
 
-    if (this.audio) {//volume di defalut all 80 %
-      this.audio.volume = 0.8;
+    if (this.audio) {
+      this.audio.volume = 0.5;
     }
 
     btnToggle.addEventListener("click", () => this.togglePlay());//dai un listener al bottone play /pause
