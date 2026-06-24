@@ -389,59 +389,59 @@ class Player {
     coverImg.id = "player-cover-img";
     coverImg.alt = "";
     const cover = document.createElement("div");
-    cover.className = "player-cover";
+    cover.classList.add("player-cover");
     cover.appendChild(coverImg);
 
     const title = document.createElement("p");
-    title.className = "player-title";
+    title.classList.add("player-title");
     title.id = "player-title";
     title.textContent = "Seleziona un brano";
 
     const artist = document.createElement("p");
-    artist.className = "player-artist";
+    artist.classList.add("player-artist");
     artist.id = "player-artist";
     artist.textContent = "—";
 
     const meta = document.createElement("div");
-    meta.className = "player-meta";
+    meta.classList.add("player-meta");
     meta.append(title, artist);
 
     const track = document.createElement("div");
-    track.className = "player-track";
+    track.classList.add("player-track");
     track.append(cover, meta);
 
     const btnShuffle = document.createElement("button");
-    btnShuffle.className = "btn-ctrl";
+    btnShuffle.classList.add("btn-ctrl");
     btnShuffle.id = "btn-shuffle";
     btnShuffle.setAttribute("aria-label", "Shuffle");
     btnShuffle.textContent = "⇄";
 
     const btnPrev = document.createElement("button");
-    btnPrev.className = "btn-ctrl";
+    btnPrev.classList.add("btn-ctrl");
     btnPrev.id = "btn-prev";
     btnPrev.setAttribute("aria-label", "Precedente");
     btnPrev.textContent = "⏮";
 
     const btnToggle = document.createElement("button");
-    btnToggle.className = "btn-play";
+    btnToggle.classList.add("btn-play");
     btnToggle.id = "btn-toggle";
     btnToggle.setAttribute("aria-label", "Play/Pausa");
     btnToggle.textContent = "▶";
 
     const btnNext = document.createElement("button");
-    btnNext.className = "btn-ctrl";
+    btnNext.classList.add("btn-ctrl");
     btnNext.id = "btn-next";
     btnNext.setAttribute("aria-label", "Successivo");
     btnNext.textContent = "⏭";
 
     const btnRepeat = document.createElement("button");
-    btnRepeat.className = "btn-ctrl";
+    btnRepeat.classList.add("btn-ctrl");
     btnRepeat.id = "btn-repeat";
     btnRepeat.setAttribute("aria-label", "Ripeti");
     btnRepeat.textContent = "↻";
 
     const controls = document.createElement("div");
-    controls.className = "player-controls";
+    controls.classList.add("player-controls");
     controls.append(btnShuffle, btnPrev, btnToggle, btnNext, btnRepeat);
 
     const timeCurrent = document.createElement("span");
@@ -449,11 +449,11 @@ class Player {
     timeCurrent.textContent = "0:00";
 
     const progressFill = document.createElement("div");
-    progressFill.className = "progress-fill";
+    progressFill.classList.add("progress-fill");
     progressFill.id = "progress-fill";
 
     const progressBar = document.createElement("div");
-    progressBar.className = "progress-bar";
+    progressBar.classList.add("progress-bar");
     progressBar.id = "progress-bar";
     progressBar.appendChild(progressFill);
 
@@ -462,28 +462,28 @@ class Player {
     timeTotal.textContent = "0:00";
 
     const progress = document.createElement("div");
-    progress.className = "player-progress";
+    progress.classList.add("player-progress");
     progress.append(timeCurrent, progressBar, timeTotal);
 
     const center = document.createElement("div");
-    center.className = "player-center";
+    center.classList.add("player-center");
     center.append(controls, progress);
 
     const volumeIcon = document.createElement("span");
     volumeIcon.textContent = "🔊";
 
     const volumeFill = document.createElement("div");
-    volumeFill.className = "volume-fill";
+    volumeFill.classList.add("volume-fill");
     volumeFill.id = "volume-fill";
     volumeFill.style.width = "80%";
 
     const volumeBar = document.createElement("div");
-    volumeBar.className = "volume-bar";
+    volumeBar.classList.add("volume-bar");
     volumeBar.id = "volume-bar";
     volumeBar.appendChild(volumeFill);
 
     const right = document.createElement("div");
-    right.className = "player-right";
+    right.classList.add("player-right");
     right.append(volumeIcon, volumeBar);
 
     footer.replaceChildren(track, center, right);
@@ -740,7 +740,7 @@ const renderSidebarFavourites = () => {
   const buildEmptyItem = () => {
     const li = document.createElement("li");
     const span = document.createElement("span");
-    span.className = "dropdown-item text-secondary";
+    span.classList.add("dropdown-item", "text-secondary");
     span.textContent = "Nessuno ancora";
     li.appendChild(span);
     return li;
