@@ -190,7 +190,7 @@ class Album {
 class Artist {
   constructor(raw) {
     this.id = raw.artistId;//ID artista
-    this.title = raw.artistName;//nome artista
+    this.name = raw.artistName;//nome artista
     this.genre = raw.primaryGenreName;//genere musicale di questa traccia
   }
 }
