@@ -81,14 +81,13 @@ const fetchJSON = async (url) => {
     }
     return await response.json();
   } catch (error) {
-    console.error("fetchJSON ha fallito:", error)
+    console.error("fetchJSON ha fallito:", error);
   }
   return { results: [], resultCount: 0 };
 };
-  // TODO: implementare con try/catch + await response.json()
-  // - Se response.ok è false, lancia un Error
-  // - Se la chiamata fallisce per rete, ritorna oggetto vuoto e logga l'errore
-  
+// TODO: implementare con try/catch + await response.json()
+// - Se response.ok è false, lancia un Error
+// - Se la chiamata fallisce per rete, ritorna oggetto vuoto e logga l'errore
 
 /*
   bigArt(url)
@@ -127,7 +126,6 @@ const debounce = (fn, ms) => {
 };
 
 /* ============================ 2.5 Funzioni ========================== */
-
 
 // qui gestisco i miei badge filtro: invece di cercare su iTunes,
 // faccio vedere i miei preferiti salvati divisi per tipo.
@@ -178,11 +176,11 @@ const myFunction = () => {
             mapaArtistas.set(track.artistId, {
               id: track.artistId,
               title: track.artist,
+              cover: track.cover, // MARCO - aggiungo track.cover per selezionare anche l'immagine
             });
           }
         });
         renderResultados([...mapaArtistas.values()], "artisti");
-
       } else if (filtro === "album") {
         // stessa cosa per gli album: uno solo per ogni albumId
         const mapaAlbums = new Map();
@@ -197,7 +195,6 @@ const myFunction = () => {
           }
         });
         renderResultados([...mapaAlbums.values()], "album");
-
       } else if (filtro === "generi") {
         // raggruppo per genere: un genere solo anche se ho più brani uguali
         const mapaGeneros = new Map();
@@ -229,7 +226,7 @@ const renderResultados = (lista, tipo) => {
     tmpl = document.getElementById("tmpl-filter-result");
   }
   if (!tmpl) return;
-   //skibidi
+  //skibidi
   // per ogni elemento clono il template e ci metto dentro i suoi dati
   const buildItem = (elemento) => {
     const item = tmpl.content.firstElementChild.cloneNode(true);
@@ -248,7 +245,12 @@ const renderResultados = (lista, tipo) => {
       });
     } else if (tipo === "artisti") {
       const img = item.querySelector(".artist-cover");
-      if (img) img.alt = elemento.title;
+      // if (img) img.alt = elemento.title;
+      if (img) {
+        // MARCO - così facendo diciamo all'immagine quale foto caricare
+        img.src = elemento.cover || "https://placehold.co/40x40";
+        img.alt = elemento.title;
+      }
       item.querySelector(".artist-name").textContent = elemento.title;
       // cliccando l'artista vado sulla sua pagina
       item.addEventListener("click", () => {
@@ -282,33 +284,33 @@ class Track {
   constructor(raw) {
     this.id = raw.trackId; //ID
     this.title = raw.trackName; //nome traccia
-    this.artist = raw.artistName;//nome artista
-    this.album = raw.collectionName;//nome album
-    this.albumId = raw.collectionId;//ID album
-    this.artistId = raw.artistId;//ID artista
-    this.cover = raw.artworkUrl100;//link immagine copertina
-    this.previewUrl = raw.previewUrl;//link streaming di 30 secondi
-    this.durationMs = raw.trackTimeMillis;//durata in millisecondi
-    this.genre = raw.primaryGenreName;//genere del brano (mi serve per il filtro Generi)
+    this.artist = raw.artistName; //nome artista
+    this.album = raw.collectionName; //nome album
+    this.albumId = raw.collectionId; //ID album
+    this.artistId = raw.artistId; //ID artista
+    this.cover = raw.artworkUrl100; //link immagine copertina
+    this.previewUrl = raw.previewUrl; //link streaming di 30 secondi
+    this.durationMs = raw.trackTimeMillis; //durata in millisecondi
+    this.genre = raw.primaryGenreName; //genere del brano (mi serve per il filtro Generi)
   }
 }
 
 class Album {
   constructor(raw) {
-    this.id = raw.collectionId;//ID album
-    this.title = raw.collectionName;//nome album
-    this.artist = raw.artistName;//chi è l'artista
-    this.cover = raw.artworkUrl100;//cover album
-    this.releaseDate = raw.releaseDate;//data di uscita
-    this.trackCount = raw.trackCount;//numero di tracce incluse
+    this.id = raw.collectionId; //ID album
+    this.title = raw.collectionName; //nome album
+    this.artist = raw.artistName; //chi è l'artista
+    this.cover = raw.artworkUrl100; //cover album
+    this.releaseDate = raw.releaseDate; //data di uscita
+    this.trackCount = raw.trackCount; //numero di tracce incluse
   }
 }
 
 class Artist {
   constructor(raw) {
-    this.id = raw.artistId;//ID artista
-    this.name = raw.artistName;//nome artista
-    this.genre = raw.primaryGenreName;//genere musicale di questa traccia
+    this.id = raw.artistId; //ID artista
+    this.name = raw.artistName; //nome artista
+    this.genre = raw.primaryGenreName; //genere musicale di questa traccia
   }
 }
 
@@ -335,37 +337,54 @@ class Artist {
 */
 class Player {
   constructor() {
-    this.audio = document.querySelector("#audio-element");//recupera tag audio a riga circa 225
-    this.currentTrack = null;//brano iniziale : nessuno
-    this.isPlaying = false;//riproduzione iniziale : nessuno
-
-    if (this.audio) {//attivalo durante tutta la durata del brano
-      this.audio.addEventListener("timeupdate", () => {
-        if (!this.audio.duration) return;//non attivarti se non ce nessun branp
-        const currentEl = document.getElementById("time-current");//seleziona testo tempo corrente a sinistra
-        const fillEl = document.getElementById("progress-fill");//seleziona barra progresso
-        if (currentEl) {//trasforma il vero tempo in formato da spotify
-          currentEl.textContent = formatTime(this.audio.currentTime * 1000);
-        }
-        if (fillEl) {//ascolta il vero avanzamento del brano e riempi la barra progresso
-          const percent = (this.audio.currentTime / this.audio.duration) * 100;
-          fillEl.style.width = `${percent}%`;
-        }
-      });
-//cosa succede qudnado il brano finisce
-      this.audio.addEventListener("ended", () => {
-        this.isPlaying = false;//non in riproduzione
-        const btnToggle = document.getElementById("btn-toggle");//prendi il pulsante play
-        if (btnToggle) btnToggle.textContent = "▶";//rimetti icona play al posto di pausa
-      });
+    // Sicurezza: se non c'è l'elemento audio nell'HTML, lo crea automaticamente
+    this.audio = document.querySelector("#audio-element");
+    if (!this.audio) {
+      this.audio = document.createElement("audio");
+      this.audio.id = "audio-element";
+      document.body.appendChild(this.audio);
     }
+
+    this.currentTrack = null;
+    this.isPlaying = false;
+
+    // Stato per Shuffle e Repeat
+    this.currentTracklist = [];
+    this.isShuffle = false;
+    this.isRepeat = false;
+    this.shufflePool = [];
+
+    // Listener per aggiornare la barra del tempo
+    this.audio.addEventListener("timeupdate", () => {
+      if (!this.audio.duration) return;
+      const currentEl = document.getElementById("time-current");
+      const fillEl = document.getElementById("progress-fill");
+      if (currentEl) {
+        currentEl.textContent = formatTime(this.audio.currentTime * 1000);
+      }
+      if (fillEl) {
+        const percent = (this.audio.currentTime / this.audio.duration) * 100;
+        fillEl.style.width = `${percent}%`;
+      }
+    });
+
+    // Gestione automatica a fine canzone
+    this.audio.addEventListener("ended", () => {
+      if (this.currentTracklist.length > 1) {
+        this.next(); // Passa alla prossima se è un album
+      } else {
+        this.isPlaying = false;
+        const btnToggle = document.getElementById("btn-toggle");
+        if (btnToggle) btnToggle.textContent = "▶";
+      }
+    });
   }
-//TUTTO L'HTML CHE CI SERVE NEL NOSTRO PLAYER/FOOTER
+
   mount() {
     const footer = document.querySelector(".player");
     if (!footer) return;
-    //struttura spotify
 
+    // --- Costruzione UI (come l'originale) ---
     const coverImg = document.createElement("img");
     coverImg.id = "player-cover-img";
     coverImg.alt = "";
@@ -456,7 +475,7 @@ class Player {
     const volumeFill = document.createElement("div");
     volumeFill.className = "volume-fill";
     volumeFill.id = "volume-fill";
-    volumeFill.style.width = "50%";
+    volumeFill.style.width = "80%";
 
     const volumeBar = document.createElement("div");
     volumeBar.className = "volume-bar";
@@ -471,11 +490,18 @@ class Player {
 
     if (this.audio) {
       const savedVolume = parseFloat(localStorage.getItem(STORAGE_KEY_VOLUME));
-      const initialVolume = Number.isNaN(savedVolume) ? 0.5 : Math.max(0, Math.min(1, savedVolume));
+      const initialVolume = Number.isNaN(savedVolume)
+        ? 0.5
+        : Math.max(0, Math.min(1, savedVolume));
       this.setVolume(initialVolume);
     }
 
-    btnToggle.addEventListener("click", () => this.togglePlay());//dai un listener al bottone play /pause
+    // --- LISTENER PULSANTI ---
+    btnToggle.addEventListener("click", () => this.togglePlay());
+    btnShuffle.addEventListener("click", () => this.toggleShuffle());
+    btnRepeat.addEventListener("click", () => this.toggleRepeat());
+    btnNext.addEventListener("click", () => this.next());
+    btnPrev.addEventListener("click", () => this.prev());
 
     //percentuale (0-1) del punto orizzontale cliccato/trascinato dentro la barra
     const percentFromEvent = (bar, e) => {
@@ -487,7 +513,7 @@ class Player {
     const updateProgress = (e) => {
       if (!this.currentTrack || !this.audio.duration) return;
       const percent = percentFromEvent(progressBar, e);
-      progressFill.style.width = `${percent * 100}%`;//feedback visivo immediato durante il trascinamento
+      progressFill.style.width = `${percent * 100}%`; //feedback visivo immediato durante il trascinamento
       this.seek(percent);
     };
     progressBar.addEventListener("mousedown", (e) => {
@@ -514,14 +540,17 @@ class Player {
       isDraggingVolume = false;
     });
   }
-//ricevi il tarck di Apple e riproducilo
-  play(track) {
+
+  play(track, tracklist = []) {
     if (!track || !track.previewUrl) return;
     this.currentTrack = track;
     this.audio.src = track.previewUrl;
     this.audio.play();
     this.isPlaying = true;
-//aggiorna tutta linterfaccia del footer con i nuovi dati del API della canzone da ascoltare
+
+    this.currentTracklist = tracklist.length > 0 ? tracklist : [track];
+    this.shufflePool = this.shufflePool.filter((id) => id !== track.id);
+
     const coverImg = document.getElementById("player-cover-img");
     const titleEl = document.getElementById("player-title");
     const artistEl = document.getElementById("player-artist");
@@ -538,10 +567,12 @@ class Player {
       addToHistory(track);
     }
   }
-//comportamento del toggle delbottone play /pause
+
   togglePlay() {
+    // Se non c'è nessuna canzone caricata, non fa nulla
     if (!this.currentTrack) return;
     const btnToggle = document.getElementById("btn-toggle");
+
     if (this.isPlaying) {
       this.audio.pause();
       this.isPlaying = false;
@@ -552,7 +583,7 @@ class Player {
       if (btnToggle) btnToggle.textContent = "⏸";
     }
   }
-//regola volume sempre tran 0 e 1
+
   setVolume(v) {
     if (!this.audio) return;
     this.audio.volume = v;
@@ -566,6 +597,73 @@ class Player {
   seek(percent) {
     if (!this.audio || !this.audio.duration) return;
     this.audio.currentTime = percent * this.audio.duration;
+  }
+
+  toggleShuffle() {
+    this.isShuffle = !this.isShuffle;
+    const btn = document.getElementById("btn-shuffle");
+    if (btn) btn.style.color = this.isShuffle ? "#1db954" : "";
+    if (this.isShuffle) this.initShufflePool();
+  }
+
+  toggleRepeat() {
+    this.isRepeat = !this.isRepeat;
+    if (this.audio) {
+      this.audio.loop = this.isRepeat;
+    }
+    const btn = document.getElementById("btn-repeat");
+    if (btn) {
+      btn.style.color = this.isRepeat ? "#1db954" : "";
+    }
+  }
+
+  initShufflePool() {
+    this.shufflePool = this.currentTracklist
+      .map((t) => t.id)
+      .filter((id) => id !== (this.currentTrack ? this.currentTrack.id : null));
+  }
+
+  next() {
+    if (this.currentTracklist.length <= 1) {
+      this.seek(0);
+      return;
+    }
+
+    if (this.isShuffle) {
+      if (this.shufflePool.length === 0) {
+        this.initShufflePool();
+        if (this.shufflePool.length === 0) {
+          this.seek(0);
+          return;
+        }
+      }
+      const randomIndex = Math.floor(Math.random() * this.shufflePool.length);
+      const nextTrackId = this.shufflePool[randomIndex];
+      this.shufflePool.splice(randomIndex, 1);
+
+      const nextTrack = this.currentTracklist.find((t) => t.id === nextTrackId);
+      if (nextTrack) this.play(nextTrack, this.currentTracklist);
+    } else {
+      const currentIndex = this.currentTracklist.findIndex(
+        (t) => t.id === this.currentTrack.id,
+      );
+      const nextIndex = (currentIndex + 1) % this.currentTracklist.length;
+      this.play(this.currentTracklist[nextIndex], this.currentTracklist);
+    }
+  }
+
+  prev() {
+    if (this.currentTracklist.length <= 1 || this.audio.currentTime > 3) {
+      this.seek(0);
+      return;
+    }
+    const currentIndex = this.currentTracklist.findIndex(
+      (t) => t.id === this.currentTrack.id,
+    );
+    const prevIndex =
+      (currentIndex - 1 + this.currentTracklist.length) %
+      this.currentTracklist.length;
+    this.play(this.currentTracklist[prevIndex], this.currentTracklist);
   }
 }
 
@@ -582,42 +680,38 @@ class Player {
 const getHistory = () => {
   const historyData = localStorage.getItem(STORAGE_KEY_HISTORY);
   return historyData ? JSON.parse(historyData) : [];
-
 };
 
 const addToHistory = (track) => {
   let history = getHistory();
 
-  history = history.filter(t => t.id !== track.id);
+  history = history.filter((t) => t.id !== track.id);
 
   history.unshift(track);
 
-  if(history.length > MAX_HISTORY) {
+  if (history.length > MAX_HISTORY) {
     history = history.slice(0, MAX_HISTORY);
   }
 
   localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(history));
- 
 };
-  // TODO: come getHistory ma con STORAGE_KEY_FAVOURITES
+// TODO: come getHistory ma con STORAGE_KEY_FAVOURITES
 const getFavourites = () => {
   const favouritesData = localStorage.getItem(STORAGE_KEY_FAVOURITES);
   return favouritesData ? JSON.parse(favouritesData) : [];
-
-  
 };
 // TODO: return getFavourites().some(t => t.id === trackId)
 const isFavourite = (trackId) => {
-  return getFavourites().some(t => t.id === trackId);
+  return getFavourites().some((t) => t.id === trackId);
 };
 // TODO: se presente per id -> rimuovi; altrimenti aggiungi in testa; salva
 const toggleFavourite = (track) => {
   let favourites = getFavourites();
-  const exists = favourites.some(t => t.id === track.id);
+  const exists = favourites.some((t) => t.id === track.id);
 
-  if(exists){
-    favourites = favourites.filter(t => t.id !== track.id);
-  }else{
+  if (exists) {
+    favourites = favourites.filter((t) => t.id !== track.id);
+  } else {
     favourites.unshift(track);
   }
 
@@ -636,7 +730,9 @@ const toggleFavourite = (track) => {
 */
 const renderSidebarFavourites = () => {
   const tmplFav = document.getElementById("tmpl-fav-item");
-  const lists = document.querySelectorAll("#sidebar-favs-list, #mobile-favs-list");
+  const lists = document.querySelectorAll(
+    "#sidebar-favs-list, #mobile-favs-list",
+  );
   if (!tmplFav || lists.length === 0) return;
 
   const favourites = getFavourites();
@@ -665,7 +761,9 @@ const renderSidebarFavourites = () => {
 
   lists.forEach((list) => {
     list.replaceChildren(
-      ...(favourites.length > 0 ? favourites.map(buildFavItem) : [buildEmptyItem()]),
+      ...(favourites.length > 0
+        ? favourites.map(buildFavItem)
+        : [buildEmptyItem()]),
     );
   });
 };
