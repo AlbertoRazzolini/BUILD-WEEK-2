@@ -125,6 +125,33 @@ const debounce = (fn, ms) => {
   };
 };
 
+/* ============================ 2.5 Funzioni ========================== */
+
+
+const myFunction = () => {
+  const myButtons = document.querySelectorAll(".badge.bg-secondary");
+
+  if (myButtons.length > 0) {
+    myButtons.forEach((singleButton) => {
+      singleButton.addEventListener("click", (event) => {
+        const filtro = event.target.dataset.filter;
+
+        if (filtro === "artisti") {
+          alert("Cercando artisti...");
+      
+        } else if (filtro === "album") {
+          alert("Caricando albums...");
+         
+        } else if (filtro === "generi") { 
+          alert("Mostrando generi musicali...");
+          
+        }
+      });
+    });
+  }
+};
+
+myFunction();
 /* ============================ 3. Classi modello ============================ */
 
 /*
@@ -133,7 +160,7 @@ const debounce = (fn, ms) => {
   Campi utili dell'API: trackId, trackName, artistName, collectionName,
   collectionId, artistId, artworkUrl100, previewUrl, trackTimeMillis.
 */
-
+//skybidi
 //cosa prendere dall API per ogni singolo brano (chiamando con il this)
 class Track {
   constructor(raw) {
@@ -352,50 +379,55 @@ class Player {
 */
 
 const getHistory = () => {
-  const raw = localStorage.getItem(STORAGE_KEY_HISTORY);
-  return raw ? JSON.parse(raw) : [];
+  const historyData = localStorage.getItem(STORAGE_KEY_HISTORY);
+  return historyData ? JSON.parse(historyData) : [];
+
 };
 
 const addToHistory = (track) => {
-  const history = getHistory().filter((t) => t.id !== track.id);
+  let history = getHistory();
+
+  history = history.filter(t => t.id !== track.id);
+
   history.unshift(track);
 
-  localStorage.setItem(
-    STORAGE_KEY_HISTORY,
-    JSON.stringify(history.slice(0, MAX_HISTORY))
-  );
-};
+  if(history.length > MAX_HISTORY) {
+    history = history.slice(0, MAX_HISTORY);
+  }
 
+  localStorage.setItem(STORAGE_KEY_FAVOURITES, JSON.stringify(history));
+ 
+};
+  // TODO: come getHistory ma con STORAGE_KEY_FAVOURITES
 const getFavourites = () => {
-  const raw = localStorage.getItem(STORAGE_KEY_FAVOURITES);
-  return raw ? JSON.parse(raw) : [];
-};
+  const favouritesData = localStorage.getItem(STORAGE_KEY_FAVOURITES);
+  return favouritesData ? JSON.parse(favouritesData) : [];
 
+  
+};
+// TODO: return getFavourites().some(t => t.id === trackId)
 const isFavourite = (trackId) => {
-  return getFavourites().some((t) => t.id === trackId);
+  return getFavourites().some(t => t.id === trackId);
 };
-
+// TODO: se presente per id -> rimuovi; altrimenti aggiungi in testa; salva
 const toggleFavourite = (track) => {
-  const favourites = getFavourites();
+  let favourites = getFavourites();
+  const exists = favourites.some(t => t.id === track.id);
 
-  const next = isFavourite(track.id)
-    ? favourites.filter((t) => t.id !== track.id)
-    : [track, ...favourites];
-
-  localStorage.setItem(
-    STORAGE_KEY_FAVOURITES,
-    JSON.stringify(next)
-  );
-
-  renderSidebarFavourites();
+  if(exists){
+    favourites = favourites.filter(t => t.id !== track.id);
+  }else{
+    favourites.unshift(track);
 };
+localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(history));
+}
 
 /* ============================ 6. Render sidebar ============================ */
 
 /*
   renderSidebar(activePage)
   - activePage: "home" | "search" | "library" (per evidenziare il link attivo)
-*/
+
 const renderSidebar = (activePage) => {
   const sidebar = document.querySelector(".sidebar");
   if (!sidebar) return;
@@ -413,32 +445,7 @@ const renderSidebar = (activePage) => {
   `;
   // TODO (opzionale): popola #sidebar-favs con i titoli dei preferiti
 };
-
-const renderSidebarFavourites = () => {
-  const list = document.querySelector("#sidebar-favs-list");
-  const tmpl = document.querySelector("#tmpl-fav-item");
-
-  if (!list || !tmpl) return;
-
-  const items = getFavourites().map((track) => {
-    const item = tmpl.content.firstElementChild.cloneNode(true);
-
-    item.querySelector(".fav-cover").src = track.cover;
-    item.querySelector(".fav-title").textContent = track.title;
-    item.querySelector(".fav-artist").textContent = track.artist;
-
-    item.addEventListener("click", () => {
-      if (window.player) {
-        window.player.play(track);
-      }
-    });
-
-    return item;
-  });
-
-  list.replaceChildren(...items);
-};
-
+*/
 /* ============================ 7. Inizializzazione ============================ */
 
 /*
