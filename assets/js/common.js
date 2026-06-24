@@ -177,6 +177,7 @@ const myFunction = () => {
             mapaArtistas.set(track.artistId, {
               id: track.artistId,
               title: track.artist,
+              cover: track.cover // MARCO - aggiungo track.cover per selezionare anche l'immagine 
             });
           }
         });
@@ -247,7 +248,12 @@ const renderResultados = (lista, tipo) => {
       });
     } else if (tipo === "artisti") {
       const img = item.querySelector(".artist-cover");
-      if (img) img.alt = elemento.title;
+      // if (img) img.alt = elemento.title;
+      if (img) {
+        // MARCO - così facendo diciamo all'immagine quale foto caricare
+        img.src = elemento.cover || "https://placehold.co/40x40"; 
+        img.alt = elemento.title;
+      }
       item.querySelector(".artist-name").textContent = elemento.title;
       // cliccando l'artista vado sulla sua pagina
       item.addEventListener("click", () => {
