@@ -38,7 +38,7 @@ const renderHero = (artist, firstTrack) => {
 
   const title = document.createElement("h1");
   title.className = "hero-title";
-  title.textContent = artist.title;
+  title.textContent = artist.name;
 
   const sub = document.createElement("p");
   sub.className = "hero-sub";
