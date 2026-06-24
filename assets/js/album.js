@@ -36,7 +36,7 @@ const showNotFound = () => {
   tracklist.replaceChildren();
 };
 
-const renderHero = (album, firstTrack) => {
+const renderHero = (album, firstTrack, tracks) => {
   const year = album.releaseDate ? new Date(album.releaseDate).getFullYear() : "";
   const totalMs = album.tracks.reduce((sum, t) => sum + (t.durationMs || 0), 0);
 
@@ -156,7 +156,7 @@ const loadAlbum = async () => {
 
   album.tracks = tracks;
 
-  renderHero(album, tracks[0]);
+  renderHero(album, tracks[0], tracks);
   renderTracklist(tracks);
 };
 
