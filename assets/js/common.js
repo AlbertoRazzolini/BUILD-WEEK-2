@@ -62,6 +62,7 @@ const API_BASE = "https://itunes.apple.com";
 const STORAGE_KEY_HISTORY = "epitunes_history";
 const STORAGE_KEY_FAVOURITES = "epitunes_favourites";
 const STORAGE_KEY_LAST_SEARCH = "epitunes_last_search";
+const STORAGE_KEY_VOLUME = "epitunes_volume";
 const MAX_HISTORY = 12;
 
 /* ============================ 2. Helpers ============================ */
@@ -469,26 +470,48 @@ class Player {
     footer.replaceChildren(track, center, right);
 
     if (this.audio) {
-      this.audio.volume = 0.5;
+      const savedVolume = parseFloat(localStorage.getItem(STORAGE_KEY_VOLUME));
+      const initialVolume = Number.isNaN(savedVolume) ? 0.5 : Math.max(0, Math.min(1, savedVolume));
+      this.setVolume(initialVolume);
     }
 
     btnToggle.addEventListener("click", () => this.togglePlay());//dai un listener al bottone play /pause
 
-    progressBar.addEventListener("click", (e) => {//listener per il click della barra del progresso della canzone
+    //percentuale (0-1) del punto orizzontale cliccato/trascinato dentro la barra
+    const percentFromEvent = (bar, e) => {
+      const rect = bar.getBoundingClientRect();
+      return Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    };
+
+    let isDraggingProgress = false;
+    const updateProgress = (e) => {
       if (!this.currentTrack || !this.audio.duration) return;
-      const rect = progressBar.getBoundingClientRect();//dammi le coordinate della barra
-      const clickX = e.clientX - rect.left;//calcola dove ho toccato esattamente
-      const width = rect.width;//larghezza totale barra
-      const percent = clickX / width;//trasforma il click in percentuale
-      this.seek(percent);//sposta la riproduzione a quella percentuale
+      const percent = percentFromEvent(progressBar, e);
+      progressFill.style.width = `${percent * 100}%`;//feedback visivo immediato durante il trascinamento
+      this.seek(percent);
+    };
+    progressBar.addEventListener("mousedown", (e) => {
+      isDraggingProgress = true;
+      updateProgress(e);
     });
 
-    volumeBar.addEventListener("click", (e) => {//listener della barra del volume
-      const rect = volumeBar.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const width = rect.width;//sempre tra 0 e 1 massimo
-      const percent = Math.max(0, Math.min(1, clickX / width));
-      this.setVolume(percent);//applica il nuovo volume
+    let isDraggingVolume = false;
+    const updateVolume = (e) => {
+      this.setVolume(percentFromEvent(volumeBar, e));
+    };
+    volumeBar.addEventListener("mousedown", (e) => {
+      isDraggingVolume = true;
+      updateVolume(e);
+    });
+
+    //il trascinamento continua anche se il mouse esce dai confini della barra
+    document.addEventListener("mousemove", (e) => {
+      if (isDraggingProgress) updateProgress(e);
+      if (isDraggingVolume) updateVolume(e);
+    });
+    document.addEventListener("mouseup", () => {
+      isDraggingProgress = false;
+      isDraggingVolume = false;
     });
   }
 //ricevi il tarck di Apple e riproducilo
@@ -537,6 +560,7 @@ class Player {
     if (volumeFill) {
       volumeFill.style.width = `${v * 100}%`;
     }
+    localStorage.setItem(STORAGE_KEY_VOLUME, v.toString());
   }
 
   seek(percent) {
