@@ -21,7 +21,7 @@
       - artist -> click = window.location.href = "artist.html?id=" + artistId
 */
 
-const player = initPage("search");
+const player = initPage();
 
 const input        = document.querySelector("#search-input");
 const rowTracks    = document.querySelector("#row-tracks");
@@ -34,6 +34,7 @@ const gridArtists  = document.querySelector("#grid-artists");
 const renderTrackCard = (track) => {
   const card = document.createElement("div");
   card.classList.add("card");
+  card.dataset.id = track.id; // serve a Player.updateNowPlayingUI() per evidenziare la card in riproduzione
 
   const imageWrap = document.createElement("div");
   imageWrap.classList.add("card-image-wrap");

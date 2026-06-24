@@ -17,7 +17,7 @@
    6) Costruisci #top-tracks come tracklist (uguale a album).
 */
 
-const player = initPage("home");
+const player = initPage();
 
 const artistHero = document.querySelector("#artist-hero");
 const topTracks  = document.querySelector("#top-tracks");

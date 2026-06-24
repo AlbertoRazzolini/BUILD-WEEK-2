@@ -7,9 +7,9 @@
    2) Costruisci queste righe (sezioni) nella .home:
         - "Riprodotti di recente" (da getHistory())  -- mostra solo se non vuota
         - "I tuoi preferiti"       (da getFavourites()) -- mostra solo se non vuota
-        - "Suggerimenti pop"       (fetch search term=pop entity=song limit=12)
-        - "Suggerimenti rock"      (fetch search term=rock entity=song limit=12)
-        - "Suggerimenti hits"   (fetch search term=hits pop entity=song limit=12)
+        - "Suggerimenti pop"       (fetch search term=pop entity=song limit=25)
+        - "Suggerimenti rock"      (fetch search term=rock entity=song limit=25)
+        - "Suggerimenti hits"   (fetch search term=hits pop entity=song limit=25)
    3) Le tre fetch dei suggerimenti vanno in PARALLELO con Promise.all
    4) Ogni card è una Track: cover, titolo, artista, button play, button cuore (favourite)
    5) Click card (cover inclusa) -> window.player.play(track)
@@ -17,7 +17,7 @@
       non un album.
 */
 
-const player = initPage("home");
+const player = initPage();
 const home = document.querySelector(".home");
 const searchInput = document.getElementById("search-input");
 
@@ -49,7 +49,7 @@ const API_URL = "https://itunes.apple.com/search";
 const fetchTracksByTerm = async (term, genre, country) => {
   try {
     const countryParam = country ? `&country=${country}` : "";
-    const url = `${API_URL}?term=${encodeURIComponent(term)}&media=music&entity=song&limit=20${countryParam}`;
+    const url = `${API_URL}?term=${encodeURIComponent(term)}&media=music&entity=song&limit=50${countryParam}`;
     const response = await fetch(url);
     const data = await response.json();
     const results = genre
@@ -57,7 +57,7 @@ const fetchTracksByTerm = async (term, genre, country) => {
           (raw.primaryGenreName || "").toLowerCase().includes(genre.toLowerCase()),
         )
       : data.results;
-    const tracks = results.slice(0, 12).map((raw) => new Track(raw));
+    const tracks = results.slice(0, 25).map((raw) => new Track(raw));
     return tracks;
   } catch (error) {
     console.error(`Errore nel fetch per "${term}":`, error);
@@ -162,6 +162,7 @@ const tmplCard = document.getElementById("tmpl-card");
 
 const buildCard = (track, currentTracklist = []) => { // <-- MODIFICA: Accetta l'array della riga
   const card = tmplCard.content.firstElementChild.cloneNode(true);
+  card.dataset.id = track.id; // serve a Player.updateNowPlayingUI() per evidenziare la card in riproduzione
 
   const img = card.querySelector("img");
   img.src = track.cover;
@@ -182,6 +183,9 @@ const buildCard = (track, currentTracklist = []) => { // <-- MODIFICA: Accetta l
     toggleFavourite(track);
     btnFav.classList.toggle("is-fav", isFavourite(track.id));
   });
+
+  // qui attacco il "+" sulla card per mettere il brano in una playlist (come nelle card di ricerca)
+  card.querySelector(".card-image-wrap").appendChild(makeAddButton(track, "card-add"));
 
   card.querySelector(".card-play").addEventListener("click", (event) => {
     event.stopPropagation();
