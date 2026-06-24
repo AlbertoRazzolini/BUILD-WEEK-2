@@ -228,7 +228,7 @@ const renderResultados = (lista, tipo) => {
     tmpl = document.getElementById("tmpl-filter-result");
   }
   if (!tmpl) return;
-
+   //skibidi
   // per ogni elemento clono il template e ci metto dentro i suoi dati
   const buildItem = (elemento) => {
     const item = tmpl.content.firstElementChild.cloneNode(true);
