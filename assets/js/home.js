@@ -46,12 +46,18 @@ const API_URL = "https://itunes.apple.com/search";
       previewUrl: track.previewUrl,
       albumId: track.collectionId,
     }));*/
-const fetchTracksByTerm = async (term) => {
+const fetchTracksByTerm = async (term, genre, country) => {
   try {
-    const url = `${API_URL}?term=${encodeURIComponent(term)}&media=music&entity=song&limit=12`;
+    const countryParam = country ? `&country=${country}` : "";
+    const url = `${API_URL}?term=${encodeURIComponent(term)}&media=music&entity=song&limit=20${countryParam}`;
     const response = await fetch(url);
     const data = await response.json();
-    const tracks = data.results.map((raw) => new Track(raw));
+    const results = genre
+      ? data.results.filter((raw) =>
+          (raw.primaryGenreName || "").toLowerCase().includes(genre.toLowerCase()),
+        )
+      : data.results;
+    const tracks = results.slice(0, 12).map((raw) => new Track(raw));
     return tracks;
   } catch (error) {
     console.error(`Errore nel fetch per "${term}":`, error);
@@ -90,9 +96,9 @@ const loadHome = async () => {
     // gli do un promise all per non chiamare 3 API una
     // dopo laltra ma tutte insieme e snellire il cariacamento
     const [popTracks, rockTracks, hitsTracks] = await Promise.all([
-      fetchTracksByTerm("pop"),
-      fetchTracksByTerm("rock"),
-      fetchTracksByTerm("hits"),
+      fetchTracksByTerm("pop", "Pop"),
+      fetchTracksByTerm("rock", "Rock"),
+      fetchTracksByTerm("pop italiano", "Pop", "IT"),
     ]);
 
     if (popTracks.length > 0) renderRow("Suggerimenti pop", popTracks);
@@ -101,7 +107,7 @@ const loadHome = async () => {
   } catch (globalError) {
     console.error("Errore critico nel loadHome:", globalError);
     const errorMsg = document.createElement("p");
-    errorMsg.className = "text-danger text-center p-4";
+    errorMsg.classList.add("text-danger", "text-center", "p-4");
     errorMsg.textContent = "Errore nel caricamento della pagina.";
     home.replaceChildren(errorMsg);
   }
@@ -123,7 +129,9 @@ const buildCard = (track) => {
   img.src = track.cover;
   img.alt = track.title;
 
-  card.querySelector(".card-title").textContent = track.title;
+  const cardTitle = card.querySelector(".card-title");
+  cardTitle.textContent = track.title;
+  cardTitle.classList.add("text-white");
   card.querySelector(".card-sub").textContent = track.artist;
 
   const btnFav = card.querySelector(".card-fav");
@@ -160,14 +168,14 @@ const renderRow = (rowTitle, tracks) => {
     container = section.querySelector(".d-flex");
   } else {
     const heading = document.createElement("h2");
-    heading.className = "fs-5 mb-3";
+    heading.classList.add("fs-5", "mb-3");
     heading.textContent = rowTitle;
 
     const list = document.createElement("div");
-    list.className = "d-flex gap-3 overflow-x-auto pb-2";
+    list.classList.add("d-flex", "gap-3", "overflow-x-auto", "pb-2");
 
     const section = document.createElement("section");
-    section.className = "mb-5";
+    section.classList.add("mb-5");
     section.append(heading, list);
 
     home.appendChild(section);
@@ -176,16 +184,18 @@ const renderRow = (rowTitle, tracks) => {
 
   container.replaceChildren(...tracks.map(buildCard));
 };
-// quando vai su invio salva il termine e vai alla pagina di ricerca dedicata
+// appena digiti almeno 3 lettere, salva il termine e vai alla pagina di ricerca dedicata
+const goToSearch = (term) => {
+  if (term.length >= 1) {
+    localStorage.setItem(STORAGE_KEY_LAST_SEARCH, term);
+    window.location.href = "search.html";
+  }
+};
+const debouncedGoToSearch = debounce(goToSearch, 400);
+
 if (searchInput) {
-  searchInput.addEventListener("keypress", (event) => {
-    if (event.key === "Enter") {
-      const valoreCercato = event.target.value.trim();
-      if (valoreCercato !== "") {
-        localStorage.setItem(STORAGE_KEY_LAST_SEARCH, valoreCercato);
-        window.location.href = "search.html";
-      }
-    }
+  searchInput.addEventListener("input", (event) => {
+    debouncedGoToSearch(event.target.value.trim());
   });
 }
 

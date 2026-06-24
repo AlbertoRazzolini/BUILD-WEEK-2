@@ -64,10 +64,8 @@ const STORAGE_KEY_FAVOURITES = "epitunes_favourites";
 const STORAGE_KEY_PLAYLIST = "epitunes_playlist"; // la mia vecchia chiave (la tengo solo per la migrazione)
 const STORAGE_KEY_PLAYLISTS = "epitunes_playlists"; // qui salvo tutte le playlist che creo
 const STORAGE_KEY_LAST_SEARCH = "epitunes_last_search";
-
-// uso questo id per i preferiti (playlist.html?id=favourites); le mie playlist
-// invece hanno un id generato quando le creo (es. pl_172...).
 const PLAYLIST_FAVOURITES = "favourites";
+const STORAGE_KEY_VOLUME = "epitunes_volume";
 const MAX_HISTORY = 12;
 
 /* ============================ 2. Helpers ============================ */
@@ -86,14 +84,13 @@ const fetchJSON = async (url) => {
     }
     return await response.json();
   } catch (error) {
-    console.error("fetchJSON ha fallito:", error)
+    console.error("fetchJSON ha fallito:", error);
   }
   return { results: [], resultCount: 0 };
 };
-  // TODO: implementare con try/catch + await response.json()
-  // - Se response.ok è false, lancia un Error
-  // - Se la chiamata fallisce per rete, ritorna oggetto vuoto e logga l'errore
-  
+// TODO: implementare con try/catch + await response.json()
+// - Se response.ok è false, lancia un Error
+// - Se la chiamata fallisce per rete, ritorna oggetto vuoto e logga l'errore
 
 /*
   bigArt(url)
@@ -132,7 +129,6 @@ const debounce = (fn, ms) => {
 };
 
 /* ============================ 2.5 Funzioni ========================== */
-
 
 // qui gestisco i miei badge filtro: invece di cercare su iTunes,
 // faccio vedere i miei preferiti salvati divisi per tipo.
@@ -183,11 +179,11 @@ const myFunction = () => {
             mapaArtistas.set(track.artistId, {
               id: track.artistId,
               title: track.artist,
+              cover: track.cover, // MARCO - aggiungo track.cover per selezionare anche l'immagine
             });
           }
         });
         renderResultados([...mapaArtistas.values()], "artisti");
-
       } else if (filtro === "album") {
         // stessa cosa per gli album: uno solo per ogni albumId
         const mapaAlbums = new Map();
@@ -202,7 +198,6 @@ const myFunction = () => {
           }
         });
         renderResultados([...mapaAlbums.values()], "album");
-
       } else if (filtro === "generi") {
         // raggruppo per genere: un genere solo anche se ho più brani uguali
         const mapaGeneros = new Map();
@@ -234,7 +229,7 @@ const renderResultados = (lista, tipo) => {
     tmpl = document.getElementById("tmpl-filter-result");
   }
   if (!tmpl) return;
-   //skibidi
+  //skibidi
   // per ogni elemento clono il template e ci metto dentro i suoi dati
   const buildItem = (elemento) => {
     const item = tmpl.content.firstElementChild.cloneNode(true);
@@ -253,7 +248,12 @@ const renderResultados = (lista, tipo) => {
       });
     } else if (tipo === "artisti") {
       const img = item.querySelector(".artist-cover");
-      if (img) img.alt = elemento.title;
+      // if (img) img.alt = elemento.title;
+      if (img) {
+        // MARCO - così facendo diciamo all'immagine quale foto caricare
+        img.src = elemento.cover || "https://placehold.co/40x40";
+        img.alt = elemento.title;
+      }
       item.querySelector(".artist-name").textContent = elemento.title;
       // cliccando l'artista vado sulla sua pagina
       item.addEventListener("click", () => {
@@ -287,33 +287,33 @@ class Track {
   constructor(raw) {
     this.id = raw.trackId; //ID
     this.title = raw.trackName; //nome traccia
-    this.artist = raw.artistName;//nome artista
-    this.album = raw.collectionName;//nome album
-    this.albumId = raw.collectionId;//ID album
-    this.artistId = raw.artistId;//ID artista
-    this.cover = raw.artworkUrl100;//link immagine copertina
-    this.previewUrl = raw.previewUrl;//link streaming di 30 secondi
-    this.durationMs = raw.trackTimeMillis;//durata in millisecondi
-    this.genre = raw.primaryGenreName;//genere del brano (mi serve per il filtro Generi)
+    this.artist = raw.artistName; //nome artista
+    this.album = raw.collectionName; //nome album
+    this.albumId = raw.collectionId; //ID album
+    this.artistId = raw.artistId; //ID artista
+    this.cover = raw.artworkUrl100; //link immagine copertina
+    this.previewUrl = raw.previewUrl; //link streaming di 30 secondi
+    this.durationMs = raw.trackTimeMillis; //durata in millisecondi
+    this.genre = raw.primaryGenreName; //genere del brano (mi serve per il filtro Generi)
   }
 }
 
 class Album {
   constructor(raw) {
-    this.id = raw.collectionId;//ID album
-    this.title = raw.collectionName;//nome album
-    this.artist = raw.artistName;//chi è l'artista
-    this.cover = raw.artworkUrl100;//cover album
-    this.releaseDate = raw.releaseDate;//data di uscita
-    this.trackCount = raw.trackCount;//numero di tracce incluse
+    this.id = raw.collectionId; //ID album
+    this.title = raw.collectionName; //nome album
+    this.artist = raw.artistName; //chi è l'artista
+    this.cover = raw.artworkUrl100; //cover album
+    this.releaseDate = raw.releaseDate; //data di uscita
+    this.trackCount = raw.trackCount; //numero di tracce incluse
   }
 }
 
 class Artist {
   constructor(raw) {
-    this.id = raw.artistId;//ID artista
-    this.name = raw.artistName;//nome artista
-    this.genre = raw.primaryGenreName;//genere musicale di questa traccia
+    this.id = raw.artistId; //ID artista
+    this.name = raw.artistName; //nome artista
+    this.genre = raw.primaryGenreName; //genere musicale di questa traccia
   }
 }
 
@@ -350,12 +350,12 @@ class Player {
 
     this.currentTrack = null;
     this.isPlaying = false;
-    
+
     // Stato per Shuffle e Repeat
-    this.currentTracklist = []; 
-    this.isShuffle = false;     
-    this.isRepeat = false;      
-    this.shufflePool = [];      
+    this.currentTracklist = [];
+    this.isShuffle = false;
+    this.isRepeat = false;
+    this.shufflePool = [];
 
     // Listener per aggiornare la barra del tempo
     this.audio.addEventListener("timeupdate", () => {
@@ -392,59 +392,59 @@ class Player {
     coverImg.id = "player-cover-img";
     coverImg.alt = "";
     const cover = document.createElement("div");
-    cover.className = "player-cover";
+    cover.classList.add("player-cover");
     cover.appendChild(coverImg);
 
     const title = document.createElement("p");
-    title.className = "player-title";
+    title.classList.add("player-title");
     title.id = "player-title";
     title.textContent = "Seleziona un brano";
 
     const artist = document.createElement("p");
-    artist.className = "player-artist";
+    artist.classList.add("player-artist");
     artist.id = "player-artist";
     artist.textContent = "—";
 
     const meta = document.createElement("div");
-    meta.className = "player-meta";
+    meta.classList.add("player-meta");
     meta.append(title, artist);
 
     const track = document.createElement("div");
-    track.className = "player-track";
+    track.classList.add("player-track");
     track.append(cover, meta);
 
     const btnShuffle = document.createElement("button");
-    btnShuffle.className = "btn-ctrl";
+    btnShuffle.classList.add("btn-ctrl");
     btnShuffle.id = "btn-shuffle";
     btnShuffle.setAttribute("aria-label", "Shuffle");
     btnShuffle.textContent = "⇄";
 
     const btnPrev = document.createElement("button");
-    btnPrev.className = "btn-ctrl";
+    btnPrev.classList.add("btn-ctrl");
     btnPrev.id = "btn-prev";
     btnPrev.setAttribute("aria-label", "Precedente");
     btnPrev.textContent = "⏮";
 
     const btnToggle = document.createElement("button");
-    btnToggle.className = "btn-play";
+    btnToggle.classList.add("btn-play");
     btnToggle.id = "btn-toggle";
     btnToggle.setAttribute("aria-label", "Play/Pausa");
     btnToggle.textContent = "▶";
 
     const btnNext = document.createElement("button");
-    btnNext.className = "btn-ctrl";
+    btnNext.classList.add("btn-ctrl");
     btnNext.id = "btn-next";
     btnNext.setAttribute("aria-label", "Successivo");
     btnNext.textContent = "⏭";
 
     const btnRepeat = document.createElement("button");
-    btnRepeat.className = "btn-ctrl";
+    btnRepeat.classList.add("btn-ctrl");
     btnRepeat.id = "btn-repeat";
     btnRepeat.setAttribute("aria-label", "Ripeti");
     btnRepeat.textContent = "↻";
 
     const controls = document.createElement("div");
-    controls.className = "player-controls";
+    controls.classList.add("player-controls");
     controls.append(btnShuffle, btnPrev, btnToggle, btnNext, btnRepeat);
 
     const timeCurrent = document.createElement("span");
@@ -452,11 +452,11 @@ class Player {
     timeCurrent.textContent = "0:00";
 
     const progressFill = document.createElement("div");
-    progressFill.className = "progress-fill";
+    progressFill.classList.add("progress-fill");
     progressFill.id = "progress-fill";
 
     const progressBar = document.createElement("div");
-    progressBar.className = "progress-bar";
+    progressBar.classList.add("progress-bar");
     progressBar.id = "progress-bar";
     progressBar.appendChild(progressFill);
 
@@ -465,34 +465,38 @@ class Player {
     timeTotal.textContent = "0:00";
 
     const progress = document.createElement("div");
-    progress.className = "player-progress";
+    progress.classList.add("player-progress");
     progress.append(timeCurrent, progressBar, timeTotal);
 
     const center = document.createElement("div");
-    center.className = "player-center";
+    center.classList.add("player-center");
     center.append(controls, progress);
 
     const volumeIcon = document.createElement("span");
     volumeIcon.textContent = "🔊";
 
     const volumeFill = document.createElement("div");
-    volumeFill.className = "volume-fill";
+    volumeFill.classList.add("volume-fill");
     volumeFill.id = "volume-fill";
     volumeFill.style.width = "80%";
 
     const volumeBar = document.createElement("div");
-    volumeBar.className = "volume-bar";
+    volumeBar.classList.add("volume-bar");
     volumeBar.id = "volume-bar";
     volumeBar.appendChild(volumeFill);
 
     const right = document.createElement("div");
-    right.className = "player-right";
+    right.classList.add("player-right");
     right.append(volumeIcon, volumeBar);
 
     footer.replaceChildren(track, center, right);
 
     if (this.audio) {
-      this.audio.volume = 0.8;
+      const savedVolume = parseFloat(localStorage.getItem(STORAGE_KEY_VOLUME));
+      const initialVolume = Number.isNaN(savedVolume)
+        ? 0.5
+        : Math.max(0, Math.min(1, savedVolume));
+      this.setVolume(initialVolume);
     }
 
     // --- LISTENER PULSANTI ---
@@ -502,21 +506,41 @@ class Player {
     btnNext.addEventListener("click", () => this.next());
     btnPrev.addEventListener("click", () => this.prev());
 
-    progressBar.addEventListener("click", (e) => {
+    //percentuale (0-1) del punto orizzontale cliccato/trascinato dentro la barra
+    const percentFromEvent = (bar, e) => {
+      const rect = bar.getBoundingClientRect();
+      return Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    };
+
+    let isDraggingProgress = false;
+    const updateProgress = (e) => {
       if (!this.currentTrack || !this.audio.duration) return;
-      const rect = progressBar.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const width = rect.width;
-      const percent = clickX / width;
+      const percent = percentFromEvent(progressBar, e);
+      progressFill.style.width = `${percent * 100}%`; //feedback visivo immediato durante il trascinamento
       this.seek(percent);
+    };
+    progressBar.addEventListener("mousedown", (e) => {
+      isDraggingProgress = true;
+      updateProgress(e);
     });
 
-    volumeBar.addEventListener("click", (e) => {
-      const rect = volumeBar.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const width = rect.width;
-      const percent = Math.max(0, Math.min(1, clickX / width));
-      this.setVolume(percent);
+    let isDraggingVolume = false;
+    const updateVolume = (e) => {
+      this.setVolume(percentFromEvent(volumeBar, e));
+    };
+    volumeBar.addEventListener("mousedown", (e) => {
+      isDraggingVolume = true;
+      updateVolume(e);
+    });
+
+    //il trascinamento continua anche se il mouse esce dai confini della barra
+    document.addEventListener("mousemove", (e) => {
+      if (isDraggingProgress) updateProgress(e);
+      if (isDraggingVolume) updateVolume(e);
+    });
+    document.addEventListener("mouseup", () => {
+      isDraggingProgress = false;
+      isDraggingVolume = false;
     });
   }
 
@@ -528,7 +552,7 @@ class Player {
     this.isPlaying = true;
 
     this.currentTracklist = tracklist.length > 0 ? tracklist : [track];
-    this.shufflePool = this.shufflePool.filter(id => id !== track.id);
+    this.shufflePool = this.shufflePool.filter((id) => id !== track.id);
 
     const coverImg = document.getElementById("player-cover-img");
     const titleEl = document.getElementById("player-title");
@@ -551,7 +575,7 @@ class Player {
     // Se non c'è nessuna canzone caricata, non fa nulla
     if (!this.currentTrack) return;
     const btnToggle = document.getElementById("btn-toggle");
-    
+
     if (this.isPlaying) {
       this.audio.pause();
       this.isPlaying = false;
@@ -570,6 +594,7 @@ class Player {
     if (volumeFill) {
       volumeFill.style.width = `${v * 100}%`;
     }
+    localStorage.setItem(STORAGE_KEY_VOLUME, v.toString());
   }
 
   seek(percent) {
@@ -580,25 +605,25 @@ class Player {
   toggleShuffle() {
     this.isShuffle = !this.isShuffle;
     const btn = document.getElementById("btn-shuffle");
-    if (btn) btn.style.color = this.isShuffle ? "#1db954" : ""; 
+    if (btn) btn.style.color = this.isShuffle ? "#1db954" : "";
     if (this.isShuffle) this.initShufflePool();
   }
 
   toggleRepeat() {
     this.isRepeat = !this.isRepeat;
     if (this.audio) {
-      this.audio.loop = this.isRepeat; 
+      this.audio.loop = this.isRepeat;
     }
     const btn = document.getElementById("btn-repeat");
     if (btn) {
-      btn.style.color = this.isRepeat ? "#1db954" : ""; 
+      btn.style.color = this.isRepeat ? "#1db954" : "";
     }
   }
 
   initShufflePool() {
     this.shufflePool = this.currentTracklist
-      .map(t => t.id)
-      .filter(id => id !== (this.currentTrack ? this.currentTrack.id : null));
+      .map((t) => t.id)
+      .filter((id) => id !== (this.currentTrack ? this.currentTrack.id : null));
   }
 
   next() {
@@ -619,10 +644,12 @@ class Player {
       const nextTrackId = this.shufflePool[randomIndex];
       this.shufflePool.splice(randomIndex, 1);
 
-      const nextTrack = this.currentTracklist.find(t => t.id === nextTrackId);
+      const nextTrack = this.currentTracklist.find((t) => t.id === nextTrackId);
       if (nextTrack) this.play(nextTrack, this.currentTracklist);
     } else {
-      const currentIndex = this.currentTracklist.findIndex(t => t.id === this.currentTrack.id);
+      const currentIndex = this.currentTracklist.findIndex(
+        (t) => t.id === this.currentTrack.id,
+      );
       const nextIndex = (currentIndex + 1) % this.currentTracklist.length;
       this.play(this.currentTracklist[nextIndex], this.currentTracklist);
     }
@@ -633,8 +660,12 @@ class Player {
       this.seek(0);
       return;
     }
-    const currentIndex = this.currentTracklist.findIndex(t => t.id === this.currentTrack.id);
-    const prevIndex = (currentIndex - 1 + this.currentTracklist.length) % this.currentTracklist.length;
+    const currentIndex = this.currentTracklist.findIndex(
+      (t) => t.id === this.currentTrack.id,
+    );
+    const prevIndex =
+      (currentIndex - 1 + this.currentTracklist.length) %
+      this.currentTracklist.length;
     this.play(this.currentTracklist[prevIndex], this.currentTracklist);
   }
 }
@@ -652,42 +683,38 @@ class Player {
 const getHistory = () => {
   const historyData = localStorage.getItem(STORAGE_KEY_HISTORY);
   return historyData ? JSON.parse(historyData) : [];
-
 };
 
 const addToHistory = (track) => {
   let history = getHistory();
 
-  history = history.filter(t => t.id !== track.id);
+  history = history.filter((t) => t.id !== track.id);
 
   history.unshift(track);
 
-  if(history.length > MAX_HISTORY) {
+  if (history.length > MAX_HISTORY) {
     history = history.slice(0, MAX_HISTORY);
   }
 
   localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(history));
- 
 };
-  // TODO: come getHistory ma con STORAGE_KEY_FAVOURITES
+// TODO: come getHistory ma con STORAGE_KEY_FAVOURITES
 const getFavourites = () => {
   const favouritesData = localStorage.getItem(STORAGE_KEY_FAVOURITES);
   return favouritesData ? JSON.parse(favouritesData) : [];
-
-  
 };
 // TODO: return getFavourites().some(t => t.id === trackId)
 const isFavourite = (trackId) => {
-  return getFavourites().some(t => t.id === trackId);
+  return getFavourites().some((t) => t.id === trackId);
 };
 // TODO: se presente per id -> rimuovi; altrimenti aggiungi in testa; salva
 const toggleFavourite = (track) => {
   let favourites = getFavourites();
-  const exists = favourites.some(t => t.id === track.id);
+  const exists = favourites.some((t) => t.id === track.id);
 
-  if(exists){
-    favourites = favourites.filter(t => t.id !== track.id);
-  }else{
+  if (exists) {
+    favourites = favourites.filter((t) => t.id !== track.id);
+  } else {
     favourites.unshift(track);
   }
 
@@ -882,7 +909,9 @@ const makeAddButton = (track, className) => {
 */
 const renderSidebarFavourites = () => {
   const tmplFav = document.getElementById("tmpl-fav-item");
-  const lists = document.querySelectorAll("#sidebar-favs-list, #mobile-favs-list");
+  const lists = document.querySelectorAll(
+    "#sidebar-favs-list, #mobile-favs-list",
+  );
   if (!tmplFav || lists.length === 0) return;
 
   const favourites = getFavourites();
@@ -890,7 +919,7 @@ const renderSidebarFavourites = () => {
   const buildEmptyItem = () => {
     const li = document.createElement("li");
     const span = document.createElement("span");
-    span.className = "dropdown-item text-secondary";
+    span.classList.add("dropdown-item", "text-secondary");
     span.textContent = "Nessuno ancora";
     li.appendChild(span);
     return li;
@@ -911,7 +940,9 @@ const renderSidebarFavourites = () => {
 
   lists.forEach((list) => {
     list.replaceChildren(
-      ...(favourites.length > 0 ? favourites.map(buildFavItem) : [buildEmptyItem()]),
+      ...(favourites.length > 0
+        ? favourites.map(buildFavItem)
+        : [buildEmptyItem()]),
     );
   });
 };
@@ -1008,4 +1039,3 @@ const initPage = (activePage) => {
 
   return player;
 };
-
