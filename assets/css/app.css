@@ -349,6 +349,81 @@ button {
   color: var(--danger);
 }
 
+/* Pulsante "+" — aggiunge il brano a "La tua playlist" (in alto a sinistra) */
+.card-add {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.card:hover .card-add,
+.card-add.is-added {
+  opacity: 1;
+}
+.card-add.is-added {
+  color: var(--success);
+}
+
+/* ============================ Menù "aggiungi a playlist" ============================ */
+
+.pl-menu {
+  position: absolute;
+  z-index: 2000;
+  min-width: 210px;
+  max-width: 280px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--bg-elev-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px;
+  box-shadow: var(--shadow);
+}
+.pl-menu-header {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 4px 8px 6px;
+}
+.pl-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pl-menu-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.pl-menu-create {
+  color: var(--success);
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+.pl-menu-empty {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 6px 10px;
+  margin: 0;
+}
+
 /* ============================ Hero album / artista ============================ */
 
 .album-hero,
@@ -433,7 +508,7 @@ button {
 }
 .track-row {
   display: grid;
-  grid-template-columns: 32px 1fr 80px 48px;
+  grid-template-columns: 32px 1fr 80px 40px 40px;
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
@@ -469,6 +544,18 @@ button {
 }
 .track-fav.is-fav {
   color: var(--danger);
+}
+
+/* Pulsante "+/✓" — aggiunge/rimuove il brano da "La tua playlist" */
+.track-add {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 20px;
+  line-height: 1;
+}
+.track-add.is-added {
+  color: var(--success);
 }
 
 /* ============================ Search ============================ */

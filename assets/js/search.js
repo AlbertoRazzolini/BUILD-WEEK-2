@@ -63,6 +63,9 @@ const renderTrackCard = (track) => {
     btnFav.classList.toggle("is-fav", isFavourite(track.id));
   });
 
+  // qui attacco il mio "+" sulla card per mettere il brano in una playlist
+  imageWrap.appendChild(makeAddButton(track, "card-add"));
+
   const title = document.createElement("p");
   title.className = "card-title";
   title.textContent = track.title;

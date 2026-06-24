@@ -61,7 +61,13 @@
 const API_BASE = "https://itunes.apple.com";
 const STORAGE_KEY_HISTORY = "epitunes_history";
 const STORAGE_KEY_FAVOURITES = "epitunes_favourites";
+const STORAGE_KEY_PLAYLIST = "epitunes_playlist"; // la mia vecchia chiave (la tengo solo per la migrazione)
+const STORAGE_KEY_PLAYLISTS = "epitunes_playlists"; // qui salvo tutte le playlist che creo
 const STORAGE_KEY_LAST_SEARCH = "epitunes_last_search";
+
+// uso questo id per i preferiti (playlist.html?id=favourites); le mie playlist
+// invece hanno un id generato quando le creo (es. pl_172...).
+const PLAYLIST_FAVOURITES = "favourites";
 const MAX_HISTORY = 12;
 
 /* ============================ 2. Helpers ============================ */
@@ -690,6 +696,182 @@ const toggleFavourite = (track) => {
   renderSidebarFavourites();
 };
 
+// qui mi salvo le playlist che crea l'utente: una lista di { id, name, tracks }.
+// ne può fare quante vuole, e da qui le leggo, le salvo, le creo e le cancello.
+const getPlaylists = () => {
+  const data = localStorage.getItem(STORAGE_KEY_PLAYLISTS);
+  return data ? JSON.parse(data) : [];
+};
+
+const savePlaylists = (playlists) => {
+  localStorage.setItem(STORAGE_KEY_PLAYLISTS, JSON.stringify(playlists));
+  renderSidebarPlaylists();
+};
+
+// mi trovo una playlist dal suo id (o null se non c'è)
+const getPlaylistById = (id) => getPlaylists().find((p) => p.id === id) || null;
+
+// creo una playlist nuova e vuota, le do un id unico e la ritorno
+const createPlaylist = (name) => {
+  const playlists = getPlaylists();
+  const playlist = {
+    id: `pl_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    name,
+    tracks: [],
+  };
+  playlists.push(playlist);
+  savePlaylists(playlists);
+  return playlist;
+};
+
+// elimino una playlist togliendola dalla lista
+const deletePlaylist = (id) => {
+  savePlaylists(getPlaylists().filter((p) => p.id !== id));
+};
+
+// controllo se un brano sta dentro una certa playlist
+const isTrackInPlaylist = (playlistId, trackId) => {
+  const p = getPlaylistById(playlistId);
+  return p ? p.tracks.some((t) => t.id === trackId) : false;
+};
+
+// controllo se il brano sta in almeno una playlist (così coloro il "+")
+const isTrackInAnyPlaylist = (trackId) =>
+  getPlaylists().some((p) => p.tracks.some((t) => t.id === trackId));
+
+// se il brano c'è già lo tolgo, altrimenti lo aggiungo in cima
+const toggleTrackInPlaylist = (playlistId, track) => {
+  const playlists = getPlaylists();
+  const p = playlists.find((pl) => pl.id === playlistId);
+  if (!p) return;
+  const exists = p.tracks.some((t) => t.id === track.id);
+  if (exists) {
+    p.tracks = p.tracks.filter((t) => t.id !== track.id);
+  } else {
+    p.tracks.unshift(track);
+  }
+  savePlaylists(playlists);
+};
+
+// prima avevo una sola "La tua playlist": se trovo ancora i suoi brani
+// vecchi li sposto in una playlist normale così non li perdo.
+const migrateOldPlaylist = () => {
+  const old = localStorage.getItem(STORAGE_KEY_PLAYLIST);
+  if (!old) return;
+  try {
+    const tracks = JSON.parse(old);
+    const playlists = getPlaylists();
+    if (Array.isArray(tracks) && tracks.length > 0) {
+      playlists.push({ id: `pl_${Date.now()}_mine`, name: "La tua playlist", tracks });
+      localStorage.setItem(STORAGE_KEY_PLAYLISTS, JSON.stringify(playlists));
+    }
+  } catch (error) {
+    console.error("Migrazione playlist fallita:", error);
+  }
+  localStorage.removeItem(STORAGE_KEY_PLAYLIST);
+};
+
+// quando clicco "+" apro un mio menù con tutte le playlist: clicco una voce
+// per mettere/togliere il brano (✓ = già dentro) e in fondo posso crearne una nuova.
+const openPlaylistMenu = (anchorEl, track, onChange) => {
+  // chiudo eventuali menù già aperti
+  document.querySelectorAll(".pl-menu").forEach((m) => m.remove());
+
+  const menu = document.createElement("div");
+  menu.className = "pl-menu";
+
+  const build = () => {
+    const playlists = getPlaylists();
+    const items = [];
+
+    const header = document.createElement("p");
+    header.className = "pl-menu-header";
+    header.textContent = "Aggiungi a playlist";
+    items.push(header);
+
+    playlists.forEach((p) => {
+      const item = document.createElement("button");
+      item.className = "pl-menu-item";
+      const inIt = p.tracks.some((t) => t.id === track.id);
+      item.textContent = `${inIt ? "✓ " : ""}${p.name}`;
+      item.addEventListener("click", (event) => {
+        event.stopPropagation();
+        toggleTrackInPlaylist(p.id, track);
+        if (onChange) onChange();
+        build(); // aggiorno i segni di spunta
+      });
+      items.push(item);
+    });
+
+    if (playlists.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "pl-menu-empty";
+      empty.textContent = "Nessuna playlist ancora";
+      items.push(empty);
+    }
+
+    const createBtn = document.createElement("button");
+    createBtn.className = "pl-menu-item pl-menu-create";
+    createBtn.textContent = "➕ Crea nuova playlist";
+    createBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const name = prompt("Nome della nuova playlist:");
+      if (name && name.trim()) {
+        const pl = createPlaylist(name.trim());
+        toggleTrackInPlaylist(pl.id, track);
+        if (onChange) onChange();
+      }
+      menu.remove();
+    });
+    items.push(createBtn);
+
+    menu.replaceChildren(...items);
+  };
+  build();
+
+  document.body.appendChild(menu);
+
+  // posiziono il menù sotto il pulsante
+  const rect = anchorEl.getBoundingClientRect();
+  menu.style.top = `${rect.bottom + window.scrollY + 4}px`;
+  menu.style.left = `${rect.left + window.scrollX}px`;
+  const menuRect = menu.getBoundingClientRect();
+  if (menuRect.right > window.innerWidth) {
+    menu.style.left = `${window.innerWidth + window.scrollX - menuRect.width - 8}px`;
+  }
+
+  // chiudo cliccando fuori (aggancio ritardato per non chiudere subito)
+  const onDocClick = (event) => {
+    if (!menu.contains(event.target) && event.target !== anchorEl) {
+      menu.remove();
+      document.removeEventListener("click", onDocClick, true);
+    }
+  };
+  setTimeout(() => document.addEventListener("click", onDocClick, true), 0);
+};
+
+// qui mi creo il pulsante "+" che apre il menù: lo uso uguale in tutte le
+// pagine e diventa verde se il brano sta già in qualche playlist.
+const makeAddButton = (track, className) => {
+  const btn = document.createElement("button");
+  btn.className = className;
+  btn.textContent = "+";
+  btn.title = "Aggiungi a una playlist";
+  btn.setAttribute("aria-label", "Aggiungi a una playlist");
+
+  const sync = () => {
+    btn.classList.toggle("is-added", isTrackInAnyPlaylist(track.id));
+  };
+  sync();
+
+  btn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    openPlaylistMenu(btn, track, sync);
+  });
+
+  return btn;
+};
+
 /* ============================ 6. Render sidebar ============================ */
 
 /*
@@ -734,6 +916,51 @@ const renderSidebarFavourites = () => {
   });
 };
 
+// qui riempio la sezione Playlist della sidebar: prima la voce per crearne una,
+// poi "Brani che ti piacciono", poi tutte le playlist che ho creato.
+const renderSidebarPlaylists = () => {
+  const tmplPlaylist = document.getElementById("tmpl-playlist-item");
+  const lists = document.querySelectorAll(
+    "#sidebar-playlists-list, #mobile-playlists-list",
+  );
+  if (!tmplPlaylist || lists.length === 0) return;
+
+  // qui costruisco la voce che, cliccata, apre la pagina della playlist
+  const buildLinkItem = (name, id) => {
+    const item = tmplPlaylist.content.firstElementChild.cloneNode(true);
+    item.querySelector(".playlist-name").textContent = name;
+    item.style.cursor = "pointer";
+    item.addEventListener("click", () => {
+      window.location.href = `playlist.html?id=${id}`;
+    });
+    return item;
+  };
+
+  // qui faccio la voce "Crea nuova playlist": chiedo il nome e la creo
+  const buildCreateItem = () => {
+    const item = tmplPlaylist.content.firstElementChild.cloneNode(true);
+    const ico = item.querySelector("span");
+    if (ico) ico.replaceChildren(document.createTextNode("+"));
+    item.style.cursor = "pointer";
+    const label = item.querySelector(".playlist-name");
+    label.textContent = "Crea nuova playlist";
+    label.classList.add("text-secondary");
+    item.addEventListener("click", () => {
+      const name = prompt("Nome della nuova playlist:");
+      if (name && name.trim()) createPlaylist(name.trim());
+    });
+    return item;
+  };
+
+  lists.forEach((list) => {
+    list.replaceChildren(
+      buildCreateItem(),
+      buildLinkItem("Brani che ti piacciono", PLAYLIST_FAVOURITES),
+      ...getPlaylists().map((p) => buildLinkItem(p.name, p.id)),
+    );
+  });
+};
+
 /*
   renderSidebar(activePage)
   - activePage: "home" | "search" | "library" (per evidenziare il link attivo)
@@ -772,7 +999,9 @@ const initPage = (activePage) => {
 
   window.player = player;
 
+  migrateOldPlaylist();
   renderSidebarFavourites();
+  renderSidebarPlaylists();
 
   // attivo i miei badge filtro (altrimenti i bottoni non fanno niente)
   myFunction();
