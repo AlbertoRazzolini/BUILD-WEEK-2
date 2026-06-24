@@ -7,7 +7,7 @@
    con Play (e il cestino per cancellarla) e la lista dei brani sotto.
 */
 
-const player = initPage("home");
+const player = initPage();
 
 const playlistHero = document.querySelector("#playlist-hero");
 const tracklist = document.querySelector("#tracklist");

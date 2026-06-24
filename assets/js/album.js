@@ -23,7 +23,7 @@
       - click sul cuore -> toggleFavourite(track)
 */
 
-const player = initPage("home");
+const player = initPage();
 
 const albumHero  = document.querySelector("#album-hero");
 const tracklist  = document.querySelector("#tracklist");
@@ -70,14 +70,21 @@ const renderHero = (album, firstTrack, tracks) => {
   btnPlay.textContent = "▶";
   btnPlay.addEventListener("click", () => player.play(firstTrack, tracks)); // MARCO- aggiunto ,tracks
 
+  // "Salva album": il cuore aggiunge/rimuove TUTTE le tracce dell'album dai preferiti,
+  // non solo la prima — è acceso solo quando l'intero album è già tra i preferiti
+  const isAlbumFavourite = () => tracks.length > 0 && tracks.every((t) => isFavourite(t.id));
+
   const btnFav = document.createElement("button");
   btnFav.classList.add("btn-fav-big");
-  btnFav.classList.toggle("is-fav", isFavourite(firstTrack.id));
-  btnFav.setAttribute("aria-label", "Preferito");
+  btnFav.classList.toggle("is-fav", isAlbumFavourite());
+  btnFav.setAttribute("aria-label", "Salva album nei preferiti");
   btnFav.textContent = "♥";
   btnFav.addEventListener("click", () => {
-    toggleFavourite(firstTrack);
-    btnFav.classList.toggle("is-fav", isFavourite(firstTrack.id));
+    const shouldRemove = isAlbumFavourite();
+    tracks.forEach((t) => {
+      if (isFavourite(t.id) === shouldRemove) toggleFavourite(t);
+    });
+    btnFav.classList.toggle("is-fav", isAlbumFavourite());
   });
 
   const actions = document.createElement("div");
