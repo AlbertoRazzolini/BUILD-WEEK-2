@@ -128,30 +128,151 @@ const debounce = (fn, ms) => {
 /* ============================ 2.5 Funzioni ========================== */
 
 
+// qui gestisco i miei badge filtro: invece di cercare su iTunes,
+// faccio vedere i miei preferiti salvati divisi per tipo.
+// siccome salvo sempre brani, ricavo album e artisti da quelli.
+// li ho fatti funzionare come su Spotify: ricliccando lo stesso
+// filtro torno alla normalità, e ne tengo attivo solo uno alla volta.
+let filtroActivo = null;
+
 const myFunction = () => {
   const myButtons = document.querySelectorAll(".badge.bg-secondary");
+  if (myButtons.length === 0) return;
 
-  if (myButtons.length > 0) {
-    myButtons.forEach((singleButton) => {
-      singleButton.addEventListener("click", (event) => {
-        const filtro = event.target.dataset.filter;
+  const contenedor = document.getElementById("sidebar-filter-results");
 
-        if (filtro === "artisti") {
-          alert("Cercando artisti...");
-      
-        } else if (filtro === "album") {
-          alert("Caricando albums...");
-         
-        } else if (filtro === "generi") { 
-          alert("Mostrando generi musicali...");
-          
-        }
-      });
+  // mi svuota la lista e spegne il verde da tutti i badge
+  const resetFiltros = () => {
+    filtroActivo = null;
+    if (contenedor) contenedor.replaceChildren();
+    myButtons.forEach((b) => {
+      b.classList.remove("bg-success");
+      b.classList.add("bg-secondary");
     });
-  }
+  };
+
+  myButtons.forEach((singleButton) => {
+    singleButton.addEventListener("click", (event) => {
+      const filtro = event.currentTarget.dataset.filter;
+
+      // se riclicco il filtro che ho già attivo, lo spengo e torno normale
+      if (filtroActivo === filtro) {
+        resetFiltros();
+        return;
+      }
+
+      // accendo questo filtro e spengo gli altri, poi lo coloro di verde
+      resetFiltros();
+      filtroActivo = filtro;
+      event.currentTarget.classList.remove("bg-secondary");
+      event.currentTarget.classList.add("bg-success");
+
+      const favourites = getFavourites();
+
+      if (filtro === "artisti") {
+        // tengo un artista solo per ogni artistId così non li ripeto
+        const mapaArtistas = new Map();
+        favourites.forEach((track) => {
+          if (!mapaArtistas.has(track.artistId)) {
+            mapaArtistas.set(track.artistId, {
+              id: track.artistId,
+              title: track.artist,
+              cover: track.cover // MARCO - aggiungo track.cover per selezionare anche l'immagine 
+            });
+          }
+        });
+        renderResultados([...mapaArtistas.values()], "artisti");
+
+      } else if (filtro === "album") {
+        // stessa cosa per gli album: uno solo per ogni albumId
+        const mapaAlbums = new Map();
+        favourites.forEach((track) => {
+          if (!mapaAlbums.has(track.albumId)) {
+            mapaAlbums.set(track.albumId, {
+              id: track.albumId,
+              title: track.album,
+              artist: track.artist,
+              cover: track.cover,
+            });
+          }
+        });
+        renderResultados([...mapaAlbums.values()], "album");
+
+      } else if (filtro === "generi") {
+        // raggruppo per genere: un genere solo anche se ho più brani uguali
+        const mapaGeneros = new Map();
+        favourites.forEach((track) => {
+          const genero = track.genre || "Sconosciuto";
+          if (!mapaGeneros.has(genero)) {
+            mapaGeneros.set(genero, { id: genero, title: genero });
+          }
+        });
+        renderResultados([...mapaGeneros.values()], "generi");
+      }
+    });
+  });
 };
 
-myFunction();
+// questa la uso per disegnare i risultati dentro #sidebar-filter-results.
+// clono il <template> giusto in base al tipo, come faccio già per i preferiti.
+const renderResultados = (lista, tipo) => {
+  const contenedor = document.getElementById("sidebar-filter-results");
+  if (!contenedor) return;
+
+  // scelgo il template a seconda di cosa devo mostrare
+  let tmpl = null;
+  if (tipo === "album") {
+    tmpl = document.getElementById("tmpl-album-item");
+  } else if (tipo === "artisti") {
+    tmpl = document.getElementById("tmpl-artist-item");
+  } else if (tipo === "generi") {
+    tmpl = document.getElementById("tmpl-filter-result");
+  }
+  if (!tmpl) return;
+   //skibidi
+  // per ogni elemento clono il template e ci metto dentro i suoi dati
+  const buildItem = (elemento) => {
+    const item = tmpl.content.firstElementChild.cloneNode(true);
+
+    if (tipo === "album") {
+      const img = item.querySelector(".album-cover");
+      if (img) {
+        img.src = elemento.cover || "https://placehold.co/40x40";
+        img.alt = elemento.title;
+      }
+      item.querySelector(".album-title").textContent = elemento.title;
+      item.querySelector(".album-artist").textContent = elemento.artist;
+      // cliccando l'album mi porto sulla pagina dell'album
+      item.addEventListener("click", () => {
+        window.location.href = `album.html?id=${elemento.id}`;
+      });
+    } else if (tipo === "artisti") {
+      const img = item.querySelector(".artist-cover");
+      // if (img) img.alt = elemento.title;
+      if (img) {
+        // MARCO - così facendo diciamo all'immagine quale foto caricare
+        img.src = elemento.cover || "https://placehold.co/40x40"; 
+        img.alt = elemento.title;
+      }
+      item.querySelector(".artist-name").textContent = elemento.title;
+      // cliccando l'artista vado sulla sua pagina
+      item.addEventListener("click", () => {
+        window.location.href = `artist.html?id=${elemento.id}`;
+      });
+    } else if (tipo === "generi") {
+      // qui elemento è un genere, quindi mostro solo il suo nome
+      const ico = item.querySelector(".ico");
+      if (ico) ico.textContent = "🎵";
+      item.querySelector(".filter-label").textContent = elemento.title;
+    }
+
+    return item;
+  };
+
+  // svuoto e rimetto dentro tutti i nuovi elementi
+  contenedor.replaceChildren(...lista.map(buildItem));
+};
+
 /* ============================ 3. Classi modello ============================ */
 
 /*
@@ -173,6 +294,7 @@ class Track {
     this.cover = raw.artworkUrl100;//link immagine copertina
     this.previewUrl = raw.previewUrl;//link streaming di 30 secondi
     this.durationMs = raw.trackTimeMillis;//durata in millisecondi
+    this.genre = raw.primaryGenreName;//genere del brano (mi serve per il filtro Generi)
   }
 }
 
@@ -190,7 +312,7 @@ class Album {
 class Artist {
   constructor(raw) {
     this.id = raw.artistId;//ID artista
-    this.title = raw.artistName;//nome artista
+    this.name = raw.artistName;//nome artista
     this.genre = raw.primaryGenreName;//genere musicale di questa traccia
   }
 }
@@ -218,37 +340,54 @@ class Artist {
 */
 class Player {
   constructor() {
-    this.audio = document.querySelector("#audio-element");//recupera tag audio a riga circa 225
-    this.currentTrack = null;//brano iniziale : nessuno
-    this.isPlaying = false;//riproduzione iniziale : nessuno
-
-    if (this.audio) {//attivalo durante tutta la durata del brano
-      this.audio.addEventListener("timeupdate", () => {
-        if (!this.audio.duration) return;//non attivarti se non ce nessun branp
-        const currentEl = document.getElementById("time-current");//seleziona testo tempo corrente a sinistra
-        const fillEl = document.getElementById("progress-fill");//seleziona barra progresso
-        if (currentEl) {//trasforma il vero tempo in formato da spotify
-          currentEl.textContent = formatTime(this.audio.currentTime * 1000);
-        }
-        if (fillEl) {//ascolta il vero avanzamento del brano e riempi la barra progresso
-          const percent = (this.audio.currentTime / this.audio.duration) * 100;
-          fillEl.style.width = `${percent}%`;
-        }
-      });
-//cosa succede qudnado il brano finisce
-      this.audio.addEventListener("ended", () => {
-        this.isPlaying = false;//non in riproduzione
-        const btnToggle = document.getElementById("btn-toggle");//prendi il pulsante play
-        if (btnToggle) btnToggle.textContent = "▶";//rimetti icona play al posto di pausa
-      });
+    // Sicurezza: se non c'è l'elemento audio nell'HTML, lo crea automaticamente
+    this.audio = document.querySelector("#audio-element");
+    if (!this.audio) {
+      this.audio = document.createElement("audio");
+      this.audio.id = "audio-element";
+      document.body.appendChild(this.audio);
     }
+
+    this.currentTrack = null;
+    this.isPlaying = false;
+    
+    // Stato per Shuffle e Repeat
+    this.currentTracklist = []; 
+    this.isShuffle = false;     
+    this.isRepeat = false;      
+    this.shufflePool = [];      
+
+    // Listener per aggiornare la barra del tempo
+    this.audio.addEventListener("timeupdate", () => {
+      if (!this.audio.duration) return;
+      const currentEl = document.getElementById("time-current");
+      const fillEl = document.getElementById("progress-fill");
+      if (currentEl) {
+        currentEl.textContent = formatTime(this.audio.currentTime * 1000);
+      }
+      if (fillEl) {
+        const percent = (this.audio.currentTime / this.audio.duration) * 100;
+        fillEl.style.width = `${percent}%`;
+      }
+    });
+
+    // Gestione automatica a fine canzone
+    this.audio.addEventListener("ended", () => {
+      if (this.currentTracklist.length > 1) {
+        this.next(); // Passa alla prossima se è un album
+      } else {
+        this.isPlaying = false;
+        const btnToggle = document.getElementById("btn-toggle");
+        if (btnToggle) btnToggle.textContent = "▶";
+      }
+    });
   }
-//TUTTO L'HTML CHE CI SERVE NEL NOSTRO PLAYER/FOOTER
+
   mount() {
     const footer = document.querySelector(".player");
     if (!footer) return;
-    //struttura spotify
 
+    // --- Costruzione UI (come l'originale) ---
     const coverImg = document.createElement("img");
     coverImg.id = "player-cover-img";
     coverImg.alt = "";
@@ -352,37 +491,45 @@ class Player {
 
     footer.replaceChildren(track, center, right);
 
-    if (this.audio) {//volume di defalut all 80 %
+    if (this.audio) {
       this.audio.volume = 0.8;
     }
 
-    btnToggle.addEventListener("click", () => this.togglePlay());//dai un listener al bottone play /pause
+    // --- LISTENER PULSANTI ---
+    btnToggle.addEventListener("click", () => this.togglePlay());
+    btnShuffle.addEventListener("click", () => this.toggleShuffle());
+    btnRepeat.addEventListener("click", () => this.toggleRepeat());
+    btnNext.addEventListener("click", () => this.next());
+    btnPrev.addEventListener("click", () => this.prev());
 
-    progressBar.addEventListener("click", (e) => {//listener per il click della barra del progresso della canzone
+    progressBar.addEventListener("click", (e) => {
       if (!this.currentTrack || !this.audio.duration) return;
-      const rect = progressBar.getBoundingClientRect();//dammi le coordinate della barra
-      const clickX = e.clientX - rect.left;//calcola dove ho toccato esattamente
-      const width = rect.width;//larghezza totale barra
-      const percent = clickX / width;//trasforma il click in percentuale
-      this.seek(percent);//sposta la riproduzione a quella percentuale
+      const rect = progressBar.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const width = rect.width;
+      const percent = clickX / width;
+      this.seek(percent);
     });
 
-    volumeBar.addEventListener("click", (e) => {//listener della barra del volume
+    volumeBar.addEventListener("click", (e) => {
       const rect = volumeBar.getBoundingClientRect();
       const clickX = e.clientX - rect.left;
-      const width = rect.width;//sempre tra 0 e 1 massimo
+      const width = rect.width;
       const percent = Math.max(0, Math.min(1, clickX / width));
-      this.setVolume(percent);//applica il nuovo volume
+      this.setVolume(percent);
     });
   }
-//ricevi il tarck di Apple e riproducilo
-  play(track) {
+
+  play(track, tracklist = []) {
     if (!track || !track.previewUrl) return;
     this.currentTrack = track;
     this.audio.src = track.previewUrl;
     this.audio.play();
     this.isPlaying = true;
-//aggiorna tutta linterfaccia del footer con i nuovi dati del API della canzone da ascoltare
+
+    this.currentTracklist = tracklist.length > 0 ? tracklist : [track];
+    this.shufflePool = this.shufflePool.filter(id => id !== track.id);
+
     const coverImg = document.getElementById("player-cover-img");
     const titleEl = document.getElementById("player-title");
     const artistEl = document.getElementById("player-artist");
@@ -399,10 +546,12 @@ class Player {
       addToHistory(track);
     }
   }
-//comportamento del toggle delbottone play /pause
+
   togglePlay() {
+    // Se non c'è nessuna canzone caricata, non fa nulla
     if (!this.currentTrack) return;
     const btnToggle = document.getElementById("btn-toggle");
+    
     if (this.isPlaying) {
       this.audio.pause();
       this.isPlaying = false;
@@ -413,7 +562,7 @@ class Player {
       if (btnToggle) btnToggle.textContent = "⏸";
     }
   }
-//regola volume sempre tran 0 e 1
+
   setVolume(v) {
     if (!this.audio) return;
     this.audio.volume = v;
@@ -426,6 +575,67 @@ class Player {
   seek(percent) {
     if (!this.audio || !this.audio.duration) return;
     this.audio.currentTime = percent * this.audio.duration;
+  }
+
+  toggleShuffle() {
+    this.isShuffle = !this.isShuffle;
+    const btn = document.getElementById("btn-shuffle");
+    if (btn) btn.style.color = this.isShuffle ? "#1db954" : ""; 
+    if (this.isShuffle) this.initShufflePool();
+  }
+
+  toggleRepeat() {
+    this.isRepeat = !this.isRepeat;
+    if (this.audio) {
+      this.audio.loop = this.isRepeat; 
+    }
+    const btn = document.getElementById("btn-repeat");
+    if (btn) {
+      btn.style.color = this.isRepeat ? "#1db954" : ""; 
+    }
+  }
+
+  initShufflePool() {
+    this.shufflePool = this.currentTracklist
+      .map(t => t.id)
+      .filter(id => id !== (this.currentTrack ? this.currentTrack.id : null));
+  }
+
+  next() {
+    if (this.currentTracklist.length <= 1) {
+      this.seek(0);
+      return;
+    }
+
+    if (this.isShuffle) {
+      if (this.shufflePool.length === 0) {
+        this.initShufflePool();
+        if (this.shufflePool.length === 0) {
+          this.seek(0);
+          return;
+        }
+      }
+      const randomIndex = Math.floor(Math.random() * this.shufflePool.length);
+      const nextTrackId = this.shufflePool[randomIndex];
+      this.shufflePool.splice(randomIndex, 1);
+
+      const nextTrack = this.currentTracklist.find(t => t.id === nextTrackId);
+      if (nextTrack) this.play(nextTrack, this.currentTracklist);
+    } else {
+      const currentIndex = this.currentTracklist.findIndex(t => t.id === this.currentTrack.id);
+      const nextIndex = (currentIndex + 1) % this.currentTracklist.length;
+      this.play(this.currentTracklist[nextIndex], this.currentTracklist);
+    }
+  }
+
+  prev() {
+    if (this.currentTracklist.length <= 1 || this.audio.currentTime > 3) {
+      this.seek(0);
+      return;
+    }
+    const currentIndex = this.currentTracklist.findIndex(t => t.id === this.currentTrack.id);
+    const prevIndex = (currentIndex - 1 + this.currentTracklist.length) % this.currentTracklist.length;
+    this.play(this.currentTracklist[prevIndex], this.currentTracklist);
   }
 }
 
@@ -570,5 +780,9 @@ const initPage = (activePage) => {
 
   renderSidebarFavourites();
 
+  // attivo i miei badge filtro (altrimenti i bottoni non fanno niente)
+  myFunction();
+
   return player;
 };
+

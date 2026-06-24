@@ -148,7 +148,7 @@ const doSearch = async (term) => {
 
   const [tracksData, albumsData, artistsData] = await Promise.all([
     fetchJSON(
-      `${API_BASE}/search?term=${encodeURIComponent(term)}&entity=song&limit=12`,
+      `${API_BASE}/search?term=${encodeURIComponent(term)}&entity=song&limit=20`,
     ),
     fetchJSON(
       `${API_BASE}/search?term=${encodeURIComponent(term)}&entity=album&limit=8`,

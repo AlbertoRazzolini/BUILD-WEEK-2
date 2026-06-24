@@ -45,7 +45,7 @@ const showNotFound = () => {
   topTracks.replaceChildren();
 };
 
-const renderHero = (artist, firstTrack) => {
+const renderHero = (artist, firstTrack, tracks = []) => {  // MARCO - aggiunto trakcs = []
   const listeners = Math.floor(Math.random() * 5_000_000);
 
   const kicker = document.createElement("p");
@@ -64,7 +64,7 @@ const renderHero = (artist, firstTrack) => {
   btnPlay.classList.add("btn-play-big");
   btnPlay.setAttribute("aria-label", "Play");
   btnPlay.textContent = "▶";
-  btnPlay.addEventListener("click", () => player.play(firstTrack));
+  btnPlay.addEventListener("click", () => player.play(firstTrack, tracks)); // MARCO - aggiunto ,tracks
 
   const actions = document.createElement("div");
   actions.classList.add("hero-actions");
@@ -102,7 +102,7 @@ const renderTopTracks = (tracks) => {
     row.classList.add("track-row");
     row.dataset.id = track.id;
     row.append(num, trackTitle, time, btnFav);
-    row.addEventListener("click", () => player.play(track));
+    row.addEventListener("click", () => player.play(track, tracks)); // MARCO- aggiunto ,tracks
 
     return row;
   });
@@ -133,7 +133,7 @@ const loadArtist = async () => {
     return;
   }
 
-  renderHero(artist, tracks[0]);
+  renderHero(artist, tracks[0], tracks); // // MARCO- aggiunto ,tracks
   renderTopTracks(tracks);
 };
 

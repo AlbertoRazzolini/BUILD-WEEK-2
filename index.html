@@ -1,93 +1,80 @@
 <!doctype html>
 <html lang="it">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EpiTunes — Home</title>
-    <!-- Bootstrap CSS -->
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-    />
 
-    <!-- Stile custom EpiTunes -->
-    <link rel="stylesheet" href="assets/css/app.css" />
-  </head>
-  <body>
-    <div class="app">
-      <!-- ===== SIDEBAR (tablet + desktop) =====
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EpiTunes — Home</title>
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+
+  <!-- Stile custom EpiTunes -->
+  <link rel="stylesheet" href="assets/css/app.css" />
+</head>
+
+<body>
+  <div class="app">
+    <!-- ===== SIDEBAR (tablet + desktop) =====
            Sotto 576px è nascosta da app.css.
            Su mobile viene sostituita dall'offcanvas Bootstrap (pannello
            laterale che scivola aprendosi dal hamburger nell'header).
            I <li> dei dropdown vengono popolati via cloneNode da Simo/Cris.
       -->
-      <aside class="sidebar">
-        <div class="brand">
-          <div class="brand-mark">E</div>
-          <span class="brand-text">EpiTunes</span>
-        </div>
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">E</div>
+        <span class="brand-text">EpiTunes</span>
+      </div>
 
-        <!-- Filtri — badge fissi, Lucio aggiunge addEventListener per il click -->
-        <!-- Al click: Javier fetcha, Simo/Cris popolano #sidebar-filter-results -->
-        <p class="card-title fs-4 text-secondary d-none d-md-block">Filtri</p>
-        <div class="row g-1 mb-4 d-none d-md-flex">
-          <div class="col-12 col-lg-4">
-            <button
-              class="badge bg-secondary w-100 py-2 fs-6"
-              data-filter="artisti"
-            >
-              Artisti
-            </button>
-          </div>
-          <div class="col-12 col-lg-4">
-            <button
-              class="badge bg-secondary w-100 py-2 fs-6"
-              data-filter="album"
-            >
-              Album
-            </button>
-          </div>
-          <div class="col-12 col-lg-4">
-            <button
-              class="badge bg-secondary w-100 py-2 fs-6"
-              data-filter="generi"
-            >
-              Generi
-            </button>
-          </div>
+      <!-- Filtri — badge fissi, Lucio aggiunge addEventListener per il click -->
+      <!-- Al click: Javier fetcha, Simo/Cris popolano #sidebar-filter-results -->
+      <p class="card-title fs-4 text-secondary d-none d-md-block">Filtri</p>
+      <div class="row g-1 mb-4 d-none d-md-flex">
+        <div class="col-12 col-lg-4">
+          <button class="badge bg-secondary w-100 py-2 fs-6" data-filter="artisti">
+            Artisti
+          </button>
         </div>
+        <div class="col-12 col-lg-4">
+          <button class="badge bg-secondary w-100 py-2 fs-6" data-filter="album">
+            Album
+          </button>
+        </div>
+        <div class="col-12 col-lg-4">
+          <button class="badge bg-secondary w-100 py-2 fs-6" data-filter="generi">
+            Generi
+          </button>
+        </div>
+      </div>
 
-        <!-- Template card filtro — Simo/Cris clonano questo nodo con cloneNode(true)
+      <!-- Template card filtro — Simo/Cris clonano questo nodo con cloneNode(true)
              e lo popolano prima di appendere in #sidebar-filter-results -->
-        <template id="tmpl-filter-result">
-          <div class="sidebar-filter-item">
-            <span class="ico"></span>
-            <!-- icona/img — sempre visibile -->
-            <span class="filter-label"></span>
-            <!-- testo — nascosto su tablet da app.css -->
-          </div>
-        </template>
+      <template id="tmpl-filter-result">
+        <div class="sidebar-filter-item">
+          <span class="ico"></span>
+          <!-- icona/img — sempre visibile -->
+          <span class="filter-label"></span>
+          <!-- testo — nascosto su tablet da app.css -->
+        </div>
+      </template>
 
-        <!-- Template album — cover + nome album + artista -->
-        <!-- Simo/Cris: cloneNode(true) → popolare .album-cover src, .album-title, .album-artist -->
-        <template id="tmpl-album-item">
-          <div class="d-flex align-items-center gap-2 p-2">
-            <img
-              class="album-cover rounded flex-shrink-0"
-              src="https://placehold.co/40x40"
-              alt="cover album"
-              style="width: 40px; height: 40px; object-fit: cover"
-            />
-            <div class="overflow-hidden">
-              <p class="album-title text-truncate mb-0"></p>
-              <p class="album-artist text-truncate mb-0 text-secondary"></p>
-            </div>
+      <!-- Template album — cover + nome album + artista -->
+      <!-- Simo/Cris: cloneNode(true) → popolare .album-cover src, .album-title, .album-artist -->
+      <template id="tmpl-album-item">
+        <div class="d-flex align-items-center gap-2 p-2">
+          <img class="album-cover rounded flex-shrink-0" src="https://placehold.co/40x40" alt="cover album"
+            style="width: 40px; height: 40px; object-fit: cover" />
+          <div class="overflow-hidden">
+            <p class="album-title text-truncate mb-0"></p>
+            <p class="album-artist text-truncate mb-0 text-secondary"></p>
           </div>
-        </template>
+        </div>
+      </template>
 
-        <!-- Template artista — avatar circolare + nome artista -->
-        <!-- Simo/Cris: cloneNode(true) → popolare .artist-cover src, .artist-name -->
-        <template id="tmpl-artist-item">
+      <!-- Template artista — avatar circolare + nome artista -->
+      <!-- Simo/Cris: cloneNode(true) → popolare .artist-cover src, .artist-name -->
+      <template id="tmpl-artist-item">
+        <!--
           <div class="d-flex align-items-center gap-2 py-2">
             <img
               class="artist-cover rounded-circle flex-shrink-0"
@@ -97,112 +84,86 @@
             />
             <p class="artist-name text-truncate mb-0"></p>
           </div>
+          -->
+        
+        <!-- MARCO - Inserisco questo per avere poi l'immagine delll'artista-->
+        <li class="sidebar-item">
+          <img src="" class="artist-cover" alt=""> <span class="artist-name"></span>
+        </li>
+      </template>
+
+      <!-- Risultati filtro — Simo/Cris appendono qui i cloni del template corretto -->
+      <!-- Album → tmpl-album-item | Artisti → tmpl-artist-item | Generi → tmpl-filter-result -->
+      <div id="sidebar-filter-results"></div>
+
+      <nav class="sidebar-nav">
+        <!-- Template preferito — brano con cover + titolo + artista -->
+        <!-- Simo/Cris: cloneNode(true) → popolare .fav-cover src, .fav-title, .fav-artist -->
+        <template id="tmpl-fav-item">
+          <li class="d-flex align-items-center gap-2 p-2">
+            <img class="fav-cover rounded flex-shrink-0" src="https://placehold.co/40x40" alt="cover"
+              style="width: 40px; height: 40px; object-fit: cover" />
+            <div class="overflow-hidden">
+              <p class="fav-title text-truncate mb-0"></p>
+              <p class="fav-artist text-truncate mb-0 text-secondary"></p>
+            </div>
+          </li>
         </template>
 
-        <!-- Risultati filtro — Simo/Cris appendono qui i cloni del template corretto -->
-        <!-- Album → tmpl-album-item | Artisti → tmpl-artist-item | Generi → tmpl-filter-result -->
-        <div id="sidebar-filter-results"></div>
+        <!-- Collapse Preferiti — <li> popolati via cloneNode (tmpl-fav-item) da Simo/Cris -->
+        <div>
+          <a data-bs-toggle="collapse" data-bs-target="#sidebar-favs-list" role="button" class="mb-1">
+            <span class="ico"><ion-icon name="heart-outline"></ion-icon></span>
+            <span>Preferiti</span>
+          </a>
+          <ul class="collapse" id="sidebar-favs-list"></ul>
+        </div>
 
-        <nav class="sidebar-nav">
-          <!-- Template preferito — brano con cover + titolo + artista -->
-          <!-- Simo/Cris: cloneNode(true) → popolare .fav-cover src, .fav-title, .fav-artist -->
-          <template id="tmpl-fav-item">
-            <li class="d-flex align-items-center gap-2 p-2">
-              <img
-                class="fav-cover rounded flex-shrink-0"
-                src="https://placehold.co/40x40"
-                alt="cover"
-                style="width: 40px; height: 40px; object-fit: cover"
-              />
-              <div class="overflow-hidden">
-                <p class="fav-title text-truncate mb-0"></p>
-                <p class="fav-artist text-truncate mb-0 text-secondary"></p>
-              </div>
-            </li>
-          </template>
+        <!-- Template playlist — icona + nome playlist -->
+        <!-- Simo/Cris: cloneNode(true) → popolare .playlist-name -->
+        <template id="tmpl-playlist-item">
+          <li class="d-flex align-items-center gap-2 p-2">
+            <span class="d-flex align-items-center justify-content-center rounded bg-secondary flex-shrink-0"
+              style="width: 40px; height: 40px">
+              <ion-icon name="musical-notes-outline"></ion-icon>
+            </span>
+            <p class="playlist-name text-truncate mb-0"></p>
+          </li>
+        </template>
 
-          <!-- Collapse Preferiti — <li> popolati via cloneNode (tmpl-fav-item) da Simo/Cris -->
-          <div>
-            <a
-              data-bs-toggle="collapse"
-              data-bs-target="#sidebar-favs-list"
-              role="button"
-              class="mb-1"
-            >
-              <span class="ico"
-                ><ion-icon name="heart-outline"></ion-icon
-              ></span>
-              <span>Preferiti</span>
-            </a>
-            <ul class="collapse" id="sidebar-favs-list"></ul>
-          </div>
+        <!-- Collapse Playlist — <li> popolati via cloneNode (tmpl-playlist-item) da Simo/Cris -->
+        <div>
+          <a data-bs-toggle="collapse" data-bs-target="#sidebar-playlists-list" role="button" class="mb-1">
+            <span class="ico"><ion-icon name="musical-notes-outline"></ion-icon></span>
+            <span>Playlist</span>
+          </a>
+          <ul class="collapse" id="sidebar-playlists-list"></ul>
+        </div>
+      </nav>
+    </aside>
 
-          <!-- Template playlist — icona + nome playlist -->
-          <!-- Simo/Cris: cloneNode(true) → popolare .playlist-name -->
-          <template id="tmpl-playlist-item">
-            <li class="d-flex align-items-center gap-2 p-2">
-              <span
-                class="d-flex align-items-center justify-content-center rounded bg-secondary flex-shrink-0"
-                style="width: 40px; height: 40px"
-              >
-                <ion-icon name="musical-notes-outline"></ion-icon>
-              </span>
-              <p class="playlist-name text-truncate mb-0"></p>
-            </li>
-          </template>
+    <main class="main">
+      <!-- Header sticky — home btn + searchbar + utente -->
+      <header class="topbar">
+        <div class="d-flex align-items-center gap-2">
+          <!-- Pulsante home -->
+          <a href="index.html" class="nav-btn d-flex align-items-center justify-content-center">
+            <ion-icon name="home-outline"></ion-icon>
+          </a>
+          <!-- Barra di ricerca -->
+          <input type="text" id="search-input" class="search-input" placeholder="Cerca brani, album, artisti..." />
+        </div>
+        <!-- Desktop: user pill — visibile da sm (576px) in su -->
+        <button class="user-pill d-none d-sm-block">👤 Utente</button>
+        <!-- Mobile: hamburger — visibile solo sotto sm (576px) -->
+        <button class="nav-btn d-sm-none d-flex align-items-center justify-content-center" data-bs-toggle="offcanvas"
+          data-bs-target="#mobile-menu" aria-label="Menu">
+          <ion-icon name="menu-outline"></ion-icon>
+        </button>
+      </header>
 
-          <!-- Collapse Playlist — <li> popolati via cloneNode (tmpl-playlist-item) da Simo/Cris -->
-          <div>
-            <a
-              data-bs-toggle="collapse"
-              data-bs-target="#sidebar-playlists-list"
-              role="button"
-              class="mb-1"
-            >
-              <span class="ico"
-                ><ion-icon name="musical-notes-outline"></ion-icon
-              ></span>
-              <span>Playlist</span>
-            </a>
-            <ul class="collapse" id="sidebar-playlists-list"></ul>
-          </div>
-        </nav>
-      </aside>
-
-      <main class="main">
-        <!-- Header sticky — home btn + searchbar + utente -->
-        <header class="topbar">
-          <div class="d-flex align-items-center gap-2">
-            <!-- Pulsante home -->
-            <a
-              href="index.html"
-              class="nav-btn d-flex align-items-center justify-content-center"
-            >
-              <ion-icon name="home-outline"></ion-icon>
-            </a>
-            <!-- Barra di ricerca -->
-            <input
-              type="text"
-              id="search-input"
-              class="search-input"
-              placeholder="Cerca brani, album, artisti..."
-            />
-          </div>
-          <!-- Desktop: user pill — visibile da sm (576px) in su -->
-          <button class="user-pill d-none d-sm-block">👤 Utente</button>
-          <!-- Mobile: hamburger — visibile solo sotto sm (576px) -->
-          <button
-            class="nav-btn d-sm-none d-flex align-items-center justify-content-center"
-            data-bs-toggle="offcanvas"
-            data-bs-target="#mobile-menu"
-            aria-label="Menu"
-          >
-            <ion-icon name="menu-outline"></ion-icon>
-          </button>
-        </header>
-
-        <section class="home">
-          <!--
+      <section class="home">
+        <!--
             SEZIONI DA COSTRUIRE (vedi js/home.js):
             - "Riprodotti di recente" (da localStorage history)
             - "I tuoi preferiti" (da localStorage favourites)
@@ -212,158 +173,130 @@
             Ogni sezione è un <section class="row"> con titolo h2 e una griglia di .card.
           -->
 
-          <!-- Template card brano/album — Simo/Cris clonano con cloneNode(true) -->
-          <!-- Popolare: img[src], .card-title, .card-sub -->
-          <!-- .card-fav aggiunge classe .is-fav quando messo tra i preferiti -->
-          <template id="tmpl-card">
-            <div class="card" style="min-width: 160px">
-              <div class="card-image-wrap">
-                <img src="" alt="cover" />
-                <button class="card-play" aria-label="Play">
-                  <ion-icon name="play-outline"></ion-icon>
-                </button>
-              </div>
-              <button class="card-fav" aria-label="Aggiungi ai preferiti">
-                <ion-icon name="heart-outline"></ion-icon>
+        <!-- Template card brano/album — Simo/Cris clonano con cloneNode(true) -->
+        <!-- Popolare: img[src], .card-title, .card-sub -->
+        <!-- .card-fav aggiunge classe .is-fav quando messo tra i preferiti -->
+        <template id="tmpl-card">
+          <div class="card">
+            <div class="card-image-wrap">
+              <img src="" alt="cover" />
+              <button class="card-play" aria-label="Play">
+                <ion-icon name="play-outline"></ion-icon>
               </button>
-              <p class="card-title text-white"></p>
-              <p class="card-sub"></p>
             </div>
-          </template>
+            <button class="card-fav" aria-label="Aggiungi ai preferiti">
+              <ion-icon name="heart-outline"></ion-icon>
+            </button>
+            <p class="card-title text-white"></p>
+            <p class="card-sub"></p>
+          </div>
+        </template>
 
-          <!-- Popolato da home.js con dati da localStorage (cronologia) -->
-          <section class="mb-5" id="row-history">
-            <h2 class="fs-5 mb-3">Riprodotti di recente</h2>
-            <div class="d-flex gap-3 overflow-x-auto pb-2"></div>
-          </section>
-
-          <!-- Popolato da home.js con dati da localStorage (preferiti) -->
-          <section class="mb-5" id="row-favourites">
-            <h2 class="fs-5 mb-3">I tuoi preferiti</h2>
-            <div class="d-flex gap-3 overflow-x-auto pb-2"></div>
-          </section>
-
-          <!-- Popolato da home.js con fetch iTunes — query "pop" -->
-          <section class="mb-5" id="row-pop">
-            <h2 class="fs-5 mb-3">Suggerimenti pop</h2>
-            <div class="d-flex gap-3 overflow-x-auto pb-2"></div>
-          </section>
-
-          <!-- Popolato da home.js con fetch iTunes — query "rock" -->
-          <section class="mb-5" id="row-rock">
-            <h2 class="fs-5 mb-3">Suggerimenti rock</h2>
-            <div class="d-flex gap-3 overflow-x-auto pb-2"></div>
-          </section>
-
-          <!-- Popolato da home.js con fetch iTunes — query "italian pop" -->
-          <section class="mb-5" id="row-hits">
-            <h2 class="fs-5 mb-3">Italian pop</h2>
-            <div class="d-flex gap-3 overflow-x-auto pb-2"></div>
-          </section>
+        <!-- Popolato da home.js con dati da localStorage (cronologia) -->
+        <section class="mb-5" id="row-history">
+          <h2 class="fs-5 mb-3">Riprodotti di recente</h2>
+          <div class="d-flex gap-3 overflow-x-auto pb-2"></div>
         </section>
-      </main>
 
-      <footer class="player">
-        <!-- Riempi via JS in common.js -->
-      </footer>
-    </div>
+        <!-- Popolato da home.js con dati da localStorage (preferiti) -->
+        <section class="mb-5" id="row-favourites">
+          <h2 class="fs-5 mb-3">I tuoi preferiti</h2>
+          <div class="d-flex gap-3 overflow-x-auto pb-2"></div>
+        </section>
 
-    <audio id="audio-element"></audio>
+        <!-- Popolato da home.js con fetch iTunes — query "pop" -->
+        <section class="mb-5" id="row-pop">
+          <h2 class="fs-5 mb-3">Suggerimenti pop</h2>
+          <div class="d-flex gap-3 overflow-x-auto pb-2"></div>
+        </section>
 
-    <!-- ===== OFFCANVAS MOBILE =====
+        <!-- Popolato da home.js con fetch iTunes — query "rock" -->
+        <section class="mb-5" id="row-rock">
+          <h2 class="fs-5 mb-3">Suggerimenti rock</h2>
+          <div class="d-flex gap-3 overflow-x-auto pb-2"></div>
+        </section>
+
+        <!-- Popolato da home.js con fetch iTunes — query "italian pop" -->
+        <section class="mb-5" id="row-hits">
+          <h2 class="fs-5 mb-3">Italian pop</h2>
+          <div class="d-flex gap-3 overflow-x-auto pb-2"></div>
+        </section>
+      </section>
+    </main>
+
+    <footer class="player">
+      <!-- Riempi via JS in common.js -->
+    </footer>
+  </div>
+
+  <audio id="audio-element"></audio>
+
+  <!-- ===== OFFCANVAS MOBILE =====
          Pannello laterale che scivola aprendosi dal hamburger (sotto 576px).Possibile problema tra 540 e 576, da rivedere nella stilizzazione per fillare il gap.
          Specchia il contenuto della sidebar desktop + pulsante utente.
          I <li> dei dropdown vengono popolati via cloneNode da Simo/Cris.
     -->
-    <div
-      class="offcanvas offcanvas-start bg-dark text-white"
-      tabindex="-1"
-      id="mobile-menu"
-      aria-labelledby="mobile-menu-label"
-    >
-      <div class="offcanvas-header border-bottom border-secondary">
-        <div class="brand">
-          <div class="brand-mark">E</div>
-          <span class="brand-text">EpiTunes</span>
-        </div>
-        <button
-          type="button"
-          class="btn-close btn-close-white"
-          data-bs-dismiss="offcanvas"
-          aria-label="Chiudi"
-        ></button>
+  <div class="offcanvas offcanvas-start bg-dark text-white" tabindex="-1" id="mobile-menu"
+    aria-labelledby="mobile-menu-label">
+    <div class="offcanvas-header border-bottom border-secondary">
+      <div class="brand">
+        <div class="brand-mark">E</div>
+        <span class="brand-text">EpiTunes</span>
       </div>
-
-      <div class="offcanvas-body">
-        <!-- Pulsante utente -->
-        <button class="user-pill mb-3">👤 Utente</button>
-
-        <nav class="sidebar-nav">
-          <a href="index.html" class="active">
-            <span class="ico"><ion-icon name="home-outline"></ion-icon></span>
-            <span>Home</span>
-          </a>
-
-          <!-- Collapse Preferiti — <li> popolati via cloneNode da Simo/Cris -->
-          <div>
-            <a
-              data-bs-toggle="collapse"
-              data-bs-target="#mobile-favs-list"
-              role="button"
-            >
-              <span class="ico"
-                ><ion-icon name="heart-outline"></ion-icon
-              ></span>
-              <span>Preferiti</span>
-            </a>
-            <!-- cloneNode Simo/Cris — usa tmpl-fav-item definito nella sidebar -->
-            <ul class="collapse" id="mobile-favs-list">
-              <li>
-                <span class="dropdown-item text-secondary">Nessuno ancora</span>
-              </li>
-            </ul>
-          </div>
-
-          <!-- Collapse Playlist — <li> popolati via cloneNode da Simo/Cris -->
-          <div>
-            <a
-              data-bs-toggle="collapse"
-              data-bs-target="#mobile-playlists-list"
-              role="button"
-            >
-              <span class="ico"
-                ><ion-icon name="musical-notes-outline"></ion-icon
-              ></span>
-              <span>Playlist</span>
-            </a>
-            <!-- cloneNode Simo/Cris — usa tmpl-playlist-item definito nella sidebar -->
-            <ul class="collapse" id="mobile-playlists-list">
-              <li>
-                <span class="dropdown-item text-secondary"
-                  >Nessuna playlist</span
-                >
-              </li>
-            </ul>
-          </div>
-        </nav>
-      </div>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Chiudi"></button>
     </div>
 
-    <!-- Bootstrap JS — necessario per Modal e Dropdown -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <div class="offcanvas-body">
+      <!-- Pulsante utente -->
+      <button class="user-pill mb-3">👤 Utente</button>
 
-    <!-- Ionicons -->
-    <script
-      type="module"
-      src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"
-    ></script>
-    <script
-      nomodule
-      src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"
-    ></script>
+      <nav class="sidebar-nav">
+        <a href="index.html" class="active">
+          <span class="ico"><ion-icon name="home-outline"></ion-icon></span>
+          <span>Home</span>
+        </a>
 
-    <!-- Script EpiTunes -->
-    <script src="assets/js/common.js"></script>
-    <script src="assets/js/home.js"></script>
-  </body>
+        <!-- Collapse Preferiti — <li> popolati via cloneNode da Simo/Cris -->
+        <div>
+          <a data-bs-toggle="collapse" data-bs-target="#mobile-favs-list" role="button">
+            <span class="ico"><ion-icon name="heart-outline"></ion-icon></span>
+            <span>Preferiti</span>
+          </a>
+          <!-- cloneNode Simo/Cris — usa tmpl-fav-item definito nella sidebar -->
+          <ul class="collapse" id="mobile-favs-list">
+            <li>
+              <span class="dropdown-item text-secondary">Nessuno ancora</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Collapse Playlist — <li> popolati via cloneNode da Simo/Cris -->
+        <div>
+          <a data-bs-toggle="collapse" data-bs-target="#mobile-playlists-list" role="button">
+            <span class="ico"><ion-icon name="musical-notes-outline"></ion-icon></span>
+            <span>Playlist</span>
+          </a>
+          <!-- cloneNode Simo/Cris — usa tmpl-playlist-item definito nella sidebar -->
+          <ul class="collapse" id="mobile-playlists-list">
+            <li>
+              <span class="dropdown-item text-secondary">Nessuna playlist</span>
+            </li>
+          </ul>
+        </div>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS — necessario per Modal e Dropdown -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Ionicons -->
+  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+
+  <!-- Script EpiTunes -->
+  <script src="assets/js/common.js"></script>
+  <script src="assets/js/home.js"></script>
+</body>
+
 </html>

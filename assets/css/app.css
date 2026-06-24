@@ -182,6 +182,19 @@ button {
   display: none;
 }
 
+/* MODIFICHE IMMAGINE SIDEBAR ARTISTA - MARCO */
+
+.artist-cover {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;      /* Crea il cerchio */
+  object-fit: cover;       /* Evita che l'immagine si deformi */
+  margin-right: 12px;      /* Distanza dal nome */
+  margin-bottom: 12px;
+}
+
+
+
 /* ============================ Topbar ============================ */
 
 .topbar {
@@ -245,10 +258,16 @@ button {
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 16px;
 }
+.grid .card {
+  min-width: 0;
+  max-width: none;
+}
 
 /* ============================ Card ============================ */
 
 .card {
+  min-width: 160px;
+  max-width: 160px;
   background: var(--bg-elev);
   border-radius: var(--radius-md);
   padding: 14px;
@@ -296,8 +315,8 @@ button {
 
 .card-play {
   position: absolute;
-  right: 22px;
-  bottom: 82px;
+  right: 8px;
+  bottom: 8px;
   width: 48px;
   height: 48px;
   border-radius: 50%;
