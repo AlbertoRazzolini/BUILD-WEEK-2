@@ -17,6 +17,7 @@
       <!-- ===== SIDEBAR (tablet + desktop) =====
            Sotto 576px è nascosta da app.css.
            Su mobile viene sostituita dall'offcanvas Bootstrap.
+           I <li> dei dropdown vengono popolati via cloneNode da Simo/Cris.
       -->
       <aside class="sidebar">
         <div class="brand">
@@ -24,7 +25,7 @@
           <span class="brand-text">EpiTunes</span>
         </div>
 
-        <!-- Filtri — badge fissi -->
+        <!-- Filtri — badge fissi, Lucio aggiunge addEventListener per il click -->
         <p class="card-title fs-4 text-secondary d-none d-md-block">Filtri</p>
         <div class="row g-1 mb-4 d-none d-md-flex">
           <div class="col-12 col-lg-4">
@@ -64,7 +65,7 @@
           <div class="d-flex align-items-center gap-2 p-2">
             <img
               class="album-cover rounded flex-shrink-0"
-              src="https://placehold.co/40x40"
+              src=""
               alt="cover album"
               style="width: 40px; height: 40px; object-fit: cover"
             />
@@ -79,7 +80,7 @@
           <div class="d-flex align-items-center gap-2 py-2">
             <img
               class="artist-cover rounded-circle flex-shrink-0"
-              src="https://placehold.co/40x40"
+              src=""
               alt="artista"
               style="width: 40px; height: 40px; object-fit: cover"
             />
@@ -94,7 +95,7 @@
             <li class="d-flex align-items-center gap-2 p-2">
               <img
                 class="fav-cover rounded flex-shrink-0"
-                src="https://placehold.co/40x40"
+                src=""
                 alt="cover"
                 style="width: 40px; height: 40px; object-fit: cover"
               />
@@ -181,16 +182,16 @@
         </header>
 
         <!--
-          COSTRUITO IN playlist.js:
-          - Leggi l'id dalla query string con URLSearchParams
-              id=favourites -> "Brani che ti piacciono" (i preferiti)
-              id=mine       -> "La tua playlist" (i brani col "+")
-          - Hero: titolo playlist + numero brani + durata totale
-          - Tracklist: lista numerata di brani; click su brano -> Player
+          COSTRUISCI IN playlist.js:
+          - Leggi l'id della playlist dalla query string con URLSearchParams
+          - Recupera la playlist da localStorage con getPlaylist()
+          - Se manca l'id o la playlist è vuota -> messaggio "Playlist non trovata"
+          - Hero: nome playlist + numero brani
+          - Tracklist: lista numerata di brani con titolo + artista + durata; click su brano -> Player
         -->
-        <section class="album-page">
+        <section class="playlist-page">
           <div class="album-hero" id="playlist-hero"></div>
-          <div class="tracklist" id="tracklist"></div>
+          <div class="tracklist" id="playlist-tracklist"></div>
         </section>
       </main>
 
@@ -199,7 +200,11 @@
 
     <audio id="audio-element"></audio>
 
-    <!-- ===== OFFCANVAS MOBILE ===== -->
+    <!-- ===== OFFCANVAS MOBILE =====
+         Pannello laterale che scivola aprendosi dal hamburger (sotto 576px).
+         Specchia il contenuto della sidebar desktop + pulsante utente.
+         I <li> dei dropdown vengono popolati via cloneNode da Simo/Cris.
+    -->
     <div
       class="offcanvas offcanvas-start bg-dark text-white"
       tabindex="-1"

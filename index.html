@@ -58,15 +58,20 @@
         </div>
       </template>
 
-      <!-- Template album — cover + nome album + artista -->
-      <!-- Simo/Cris: cloneNode(true) → popolare .album-cover src, .album-title, .album-artist -->
-      <template id="tmpl-album-item">
-        <div class="d-flex align-items-center gap-2 p-2">
-          <img class="album-cover rounded flex-shrink-0" src="https://placehold.co/40x40" alt="cover album"
-            style="width: 40px; height: 40px; object-fit: cover" />
-          <div class="overflow-hidden">
-            <p class="album-title text-truncate mb-0"></p>
-            <p class="album-artist text-truncate mb-0 text-secondary"></p>
+        <!-- Template album — cover + nome album + artista -->
+        <!-- Simo/Cris: cloneNode(true) → popolare .album-cover src, .album-title, .album-artist -->
+        <template id="tmpl-album-item">
+          <div class="d-flex align-items-center gap-2 p-2">
+            <img
+              class="album-cover rounded flex-shrink-0"
+              src=""
+              alt="cover album"
+              style="width: 40px; height: 40px; object-fit: cover"
+            />
+            <div class="overflow-hidden">
+              <p class="album-title text-truncate mb-0"></p>
+              <p class="album-artist text-truncate mb-0 text-secondary"></p>
+            </div>
           </div>
         </div>
       </template>
@@ -78,7 +83,7 @@
           <div class="d-flex align-items-center gap-2 py-2">
             <img
               class="artist-cover rounded-circle flex-shrink-0"
-              src="https://placehold.co/40x40"
+              src=""
               alt="artista"
               style="width: 40px; height: 40px; object-fit: cover"
             />
@@ -96,19 +101,23 @@
       <!-- Album → tmpl-album-item | Artisti → tmpl-artist-item | Generi → tmpl-filter-result -->
       <div id="sidebar-filter-results"></div>
 
-      <nav class="sidebar-nav">
-        <!-- Template preferito — brano con cover + titolo + artista -->
-        <!-- Simo/Cris: cloneNode(true) → popolare .fav-cover src, .fav-title, .fav-artist -->
-        <template id="tmpl-fav-item">
-          <li class="d-flex align-items-center gap-2 p-2">
-            <img class="fav-cover rounded flex-shrink-0" src="https://placehold.co/40x40" alt="cover"
-              style="width: 40px; height: 40px; object-fit: cover" />
-            <div class="overflow-hidden">
-              <p class="fav-title text-truncate mb-0"></p>
-              <p class="fav-artist text-truncate mb-0 text-secondary"></p>
-            </div>
-          </li>
-        </template>
+        <nav class="sidebar-nav">
+          <!-- Template preferito — brano con cover + titolo + artista -->
+          <!-- Simo/Cris: cloneNode(true) → popolare .fav-cover src, .fav-title, .fav-artist -->
+          <template id="tmpl-fav-item">
+            <li class="d-flex align-items-center gap-2 p-2">
+              <img
+                class="fav-cover rounded flex-shrink-0"
+                src=""
+                alt="cover"
+                style="width: 40px; height: 40px; object-fit: cover"
+              />
+              <div class="overflow-hidden">
+                <p class="fav-title text-truncate mb-0"></p>
+                <p class="fav-artist text-truncate mb-0 text-secondary"></p>
+              </div>
+            </li>
+          </template>
 
         <!-- Collapse Preferiti — <li> popolati via cloneNode (tmpl-fav-item) da Simo/Cris -->
         <div>
@@ -183,6 +192,9 @@
               <button class="card-play" aria-label="Play">
                 <ion-icon name="play-outline"></ion-icon>
               </button>
+              <p class="card-title"></p>
+              <!-- <a> (non <p>) — JS imposta .href per linkare artista o album -->
+              <a class="card-sub"></a>
             </div>
             <button class="card-fav" aria-label="Aggiungi ai preferiti">
               <ion-icon name="heart-outline"></ion-icon>

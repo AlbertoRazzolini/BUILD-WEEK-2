@@ -168,7 +168,12 @@ const buildCard = (track, currentTracklist = []) => { // <-- MODIFICA: Accetta l
   img.alt = track.title;
 
   card.querySelector(".card-title").textContent = track.title;
-  card.querySelector(".card-sub").textContent = track.artist;
+
+  // card-sub è un <a>: href porta su artist.html; stopPropagation evita che il click lanci anche il play
+  const sub = card.querySelector(".card-sub");
+  sub.textContent = track.artist;
+  sub.href = `artist.html?id=${track.artistId}`;
+  sub.addEventListener("click", (e) => e.stopPropagation());
 
   const btnFav = card.querySelector(".card-fav");
   btnFav.classList.toggle("is-fav", isFavourite(track.id));

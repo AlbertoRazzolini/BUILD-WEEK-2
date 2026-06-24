@@ -64,8 +64,7 @@ const STORAGE_KEY_FAVOURITES = "epitunes_favourites";
 const STORAGE_KEY_PLAYLIST = "epitunes_playlist"; // la mia vecchia chiave (la tengo solo per la migrazione)
 const STORAGE_KEY_PLAYLISTS = "epitunes_playlists"; // qui salvo tutte le playlist che creo
 const STORAGE_KEY_LAST_SEARCH = "epitunes_last_search";
-const PLAYLIST_FAVOURITES = "favourites";
-const STORAGE_KEY_VOLUME = "epitunes_volume";
+const STORAGE_KEY_PLAYLIST = "epitunes_playlist"; // brani aggiunti manualmente dall'utente (Lucio legge questa chiave per i container playlist)
 const MAX_HISTORY = 12;
 
 /* ============================ 2. Helpers ============================ */
@@ -303,6 +302,7 @@ class Album {
     this.id = raw.collectionId; //ID album
     this.title = raw.collectionName; //nome album
     this.artist = raw.artistName; //chi è l'artista
+    this.artistId = raw.artistId; //ID artista (per link pagina artista)
     this.cover = raw.artworkUrl100; //cover album
     this.releaseDate = raw.releaseDate; //data di uscita
     this.trackCount = raw.trackCount; //numero di tracce incluse
@@ -340,12 +340,32 @@ class Artist {
 */
 class Player {
   constructor() {
-    // Sicurezza: se non c'è l'elemento audio nell'HTML, lo crea automaticamente
-    this.audio = document.querySelector("#audio-element");
-    if (!this.audio) {
-      this.audio = document.createElement("audio");
-      this.audio.id = "audio-element";
-      document.body.appendChild(this.audio);
+    this.audio = document.querySelector("#audio-element"); //recupera tag audio a riga circa 225
+    this.currentTrack = null; //brano iniziale : nessuno
+    this.isPlaying = false; //riproduzione iniziale : nessuno
+
+    if (this.audio) {
+      //attivalo durante tutta la durata del brano
+      this.audio.addEventListener("timeupdate", () => {
+        if (!this.audio.duration) return; //non attivarti se non ce nessun branp
+        const currentEl = document.getElementById("time-current"); //seleziona testo tempo corrente a sinistra
+        const fillEl = document.getElementById("progress-fill"); //seleziona barra progresso
+        if (currentEl) {
+          //trasforma il vero tempo in formato da spotify
+          currentEl.textContent = formatTime(this.audio.currentTime * 1000);
+        }
+        if (fillEl) {
+          //ascolta il vero avanzamento del brano e riempi la barra progresso
+          const percent = (this.audio.currentTime / this.audio.duration) * 100;
+          fillEl.style.width = `${percent}%`;
+        }
+      });
+      //cosa succede qudnado il brano finisce
+      this.audio.addEventListener("ended", () => {
+        this.isPlaying = false; //non in riproduzione
+        const btnToggle = document.getElementById("btn-toggle"); //prendi il pulsante play
+        if (btnToggle) btnToggle.textContent = "▶"; //rimetti icona play al posto di pausa
+      });
     }
 
     this.currentTrack = null;
@@ -382,7 +402,7 @@ class Player {
       }
     });
   }
-
+  //TUTTO L'HTML CHE CI SERVE NEL NOSTRO PLAYER/FOOTER
   mount() {
     const footer = document.querySelector(".player");
     if (!footer) return;
@@ -395,13 +415,14 @@ class Player {
     cover.classList.add("player-cover");
     cover.appendChild(coverImg);
 
-    const title = document.createElement("p");
-    title.classList.add("player-title");
+    // <a> invece di <p>: play() imposta href verso album.html / artist.html al cambio brano
+    const title = document.createElement("a");
+    title.className = "player-title";
     title.id = "player-title";
     title.textContent = "Seleziona un brano";
 
-    const artist = document.createElement("p");
-    artist.classList.add("player-artist");
+    const artist = document.createElement("a");
+    artist.className = "player-artist";
     artist.id = "player-artist";
     artist.textContent = "—";
 
@@ -499,61 +520,35 @@ class Player {
       this.setVolume(initialVolume);
     }
 
-    // --- LISTENER PULSANTI ---
-    btnToggle.addEventListener("click", () => this.togglePlay());
-    btnShuffle.addEventListener("click", () => this.toggleShuffle());
-    btnRepeat.addEventListener("click", () => this.toggleRepeat());
-    btnNext.addEventListener("click", () => this.next());
-    btnPrev.addEventListener("click", () => this.prev());
+    btnToggle.addEventListener("click", () => this.togglePlay()); //dai un listener al bottone play /pause
 
-    //percentuale (0-1) del punto orizzontale cliccato/trascinato dentro la barra
-    const percentFromEvent = (bar, e) => {
-      const rect = bar.getBoundingClientRect();
-      return Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    };
-
-    let isDraggingProgress = false;
-    const updateProgress = (e) => {
+    progressBar.addEventListener("click", (e) => {
+      //listener per il click della barra del progresso della canzone
       if (!this.currentTrack || !this.audio.duration) return;
-      const percent = percentFromEvent(progressBar, e);
-      progressFill.style.width = `${percent * 100}%`; //feedback visivo immediato durante il trascinamento
-      this.seek(percent);
-    };
-    progressBar.addEventListener("mousedown", (e) => {
-      isDraggingProgress = true;
-      updateProgress(e);
+      const rect = progressBar.getBoundingClientRect(); //dammi le coordinate della barra
+      const clickX = e.clientX - rect.left; //calcola dove ho toccato esattamente
+      const width = rect.width; //larghezza totale barra
+      const percent = clickX / width; //trasforma il click in percentuale
+      this.seek(percent); //sposta la riproduzione a quella percentuale
     });
 
-    let isDraggingVolume = false;
-    const updateVolume = (e) => {
-      this.setVolume(percentFromEvent(volumeBar, e));
-    };
-    volumeBar.addEventListener("mousedown", (e) => {
-      isDraggingVolume = true;
-      updateVolume(e);
-    });
-
-    //il trascinamento continua anche se il mouse esce dai confini della barra
-    document.addEventListener("mousemove", (e) => {
-      if (isDraggingProgress) updateProgress(e);
-      if (isDraggingVolume) updateVolume(e);
-    });
-    document.addEventListener("mouseup", () => {
-      isDraggingProgress = false;
-      isDraggingVolume = false;
+    volumeBar.addEventListener("click", (e) => {
+      //listener della barra del volume
+      const rect = volumeBar.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const width = rect.width; //sempre tra 0 e 1 massimo
+      const percent = Math.max(0, Math.min(1, clickX / width));
+      this.setVolume(percent); //applica il nuovo volume
     });
   }
-
-  play(track, tracklist = []) {
+  //ricevi il tarck di Apple e riproducilo
+  play(track) {
     if (!track || !track.previewUrl) return;
     this.currentTrack = track;
     this.audio.src = track.previewUrl;
     this.audio.play();
     this.isPlaying = true;
-
-    this.currentTracklist = tracklist.length > 0 ? tracklist : [track];
-    this.shufflePool = this.shufflePool.filter((id) => id !== track.id);
-
+    //aggiorna tutta linterfaccia del footer con i nuovi dati del API della canzone da ascoltare
     const coverImg = document.getElementById("player-cover-img");
     const titleEl = document.getElementById("player-title");
     const artistEl = document.getElementById("player-artist");
@@ -561,8 +556,14 @@ class Player {
     const btnToggle = document.getElementById("btn-toggle");
 
     if (coverImg) coverImg.src = track.cover;
-    if (titleEl) titleEl.textContent = track.title;
-    if (artistEl) artistEl.textContent = track.artist;
+    if (titleEl) {
+      titleEl.textContent = track.title;
+      titleEl.href = `album.html?id=${track.albumId}`; // titolo footer → pagina album
+    }
+    if (artistEl) {
+      artistEl.textContent = track.artist;
+      artistEl.href = `artist.html?id=${track.artistId}`; // artista footer → pagina artista
+    }
     if (totalEl) totalEl.textContent = formatTime(track.durationMs);
     if (btnToggle) btnToggle.textContent = "⏸";
 
@@ -570,7 +571,7 @@ class Player {
       addToHistory(track);
     }
   }
-
+  //comportamento del toggle delbottone play /pause
   togglePlay() {
     // Se non c'è nessuna canzone caricata, non fa nulla
     if (!this.currentTrack) return;
@@ -586,7 +587,7 @@ class Player {
       if (btnToggle) btnToggle.textContent = "⏸";
     }
   }
-
+  //regola volume sempre tran 0 e 1
   setVolume(v) {
     if (!this.audio) return;
     this.audio.volume = v;
@@ -723,180 +724,27 @@ const toggleFavourite = (track) => {
   renderSidebarFavourites();
 };
 
-// qui mi salvo le playlist che crea l'utente: una lista di { id, name, tracks }.
-// ne può fare quante vuole, e da qui le leggo, le salvo, le creo e le cancello.
-const getPlaylists = () => {
-  const data = localStorage.getItem(STORAGE_KEY_PLAYLISTS);
+// Helper playlist — stessa struttura dei preferiti.
+// Lucio usa getPlaylist() per costruire i container "La tua playlist".
+// Il bottone di aggiunta è implementato da Lucio; questi helper sono condivisi.
+const getPlaylist = () => {
+  const data = localStorage.getItem(STORAGE_KEY_PLAYLIST);
   return data ? JSON.parse(data) : [];
 };
 
-const savePlaylists = (playlists) => {
-  localStorage.setItem(STORAGE_KEY_PLAYLISTS, JSON.stringify(playlists));
-  renderSidebarPlaylists();
+const isInPlaylist = (trackId) => {
+  return getPlaylist().some((t) => t.id === trackId);
 };
 
-// mi trovo una playlist dal suo id (o null se non c'è)
-const getPlaylistById = (id) => getPlaylists().find((p) => p.id === id) || null;
-
-// creo una playlist nuova e vuota, le do un id unico e la ritorno
-const createPlaylist = (name) => {
-  const playlists = getPlaylists();
-  const playlist = {
-    id: `pl_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    name,
-    tracks: [],
-  };
-  playlists.push(playlist);
-  savePlaylists(playlists);
-  return playlist;
-};
-
-// elimino una playlist togliendola dalla lista
-const deletePlaylist = (id) => {
-  savePlaylists(getPlaylists().filter((p) => p.id !== id));
-};
-
-// controllo se un brano sta dentro una certa playlist
-const isTrackInPlaylist = (playlistId, trackId) => {
-  const p = getPlaylistById(playlistId);
-  return p ? p.tracks.some((t) => t.id === trackId) : false;
-};
-
-// controllo se il brano sta in almeno una playlist (così coloro il "+")
-const isTrackInAnyPlaylist = (trackId) =>
-  getPlaylists().some((p) => p.tracks.some((t) => t.id === trackId));
-
-// se il brano c'è già lo tolgo, altrimenti lo aggiungo in cima
-const toggleTrackInPlaylist = (playlistId, track) => {
-  const playlists = getPlaylists();
-  const p = playlists.find((pl) => pl.id === playlistId);
-  if (!p) return;
-  const exists = p.tracks.some((t) => t.id === track.id);
+const togglePlaylist = (track) => {
+  let playlist = getPlaylist();
+  const exists = playlist.some((t) => t.id === track.id);
   if (exists) {
-    p.tracks = p.tracks.filter((t) => t.id !== track.id);
+    playlist = playlist.filter((t) => t.id !== track.id);
   } else {
-    p.tracks.unshift(track);
+    playlist.unshift(track);
   }
-  savePlaylists(playlists);
-};
-
-// prima avevo una sola "La tua playlist": se trovo ancora i suoi brani
-// vecchi li sposto in una playlist normale così non li perdo.
-const migrateOldPlaylist = () => {
-  const old = localStorage.getItem(STORAGE_KEY_PLAYLIST);
-  if (!old) return;
-  try {
-    const tracks = JSON.parse(old);
-    const playlists = getPlaylists();
-    if (Array.isArray(tracks) && tracks.length > 0) {
-      playlists.push({ id: `pl_${Date.now()}_mine`, name: "La tua playlist", tracks });
-      localStorage.setItem(STORAGE_KEY_PLAYLISTS, JSON.stringify(playlists));
-    }
-  } catch (error) {
-    console.error("Migrazione playlist fallita:", error);
-  }
-  localStorage.removeItem(STORAGE_KEY_PLAYLIST);
-};
-
-// quando clicco "+" apro un mio menù con tutte le playlist: clicco una voce
-// per mettere/togliere il brano (✓ = già dentro) e in fondo posso crearne una nuova.
-const openPlaylistMenu = (anchorEl, track, onChange) => {
-  // chiudo eventuali menù già aperti
-  document.querySelectorAll(".pl-menu").forEach((m) => m.remove());
-
-  const menu = document.createElement("div");
-  menu.className = "pl-menu";
-
-  const build = () => {
-    const playlists = getPlaylists();
-    const items = [];
-
-    const header = document.createElement("p");
-    header.className = "pl-menu-header";
-    header.textContent = "Aggiungi a playlist";
-    items.push(header);
-
-    playlists.forEach((p) => {
-      const item = document.createElement("button");
-      item.className = "pl-menu-item";
-      const inIt = p.tracks.some((t) => t.id === track.id);
-      item.textContent = `${inIt ? "✓ " : ""}${p.name}`;
-      item.addEventListener("click", (event) => {
-        event.stopPropagation();
-        toggleTrackInPlaylist(p.id, track);
-        if (onChange) onChange();
-        build(); // aggiorno i segni di spunta
-      });
-      items.push(item);
-    });
-
-    if (playlists.length === 0) {
-      const empty = document.createElement("p");
-      empty.className = "pl-menu-empty";
-      empty.textContent = "Nessuna playlist ancora";
-      items.push(empty);
-    }
-
-    const createBtn = document.createElement("button");
-    createBtn.className = "pl-menu-item pl-menu-create";
-    createBtn.textContent = "➕ Crea nuova playlist";
-    createBtn.addEventListener("click", (event) => {
-      event.stopPropagation();
-      const name = prompt("Nome della nuova playlist:");
-      if (name && name.trim()) {
-        const pl = createPlaylist(name.trim());
-        toggleTrackInPlaylist(pl.id, track);
-        if (onChange) onChange();
-      }
-      menu.remove();
-    });
-    items.push(createBtn);
-
-    menu.replaceChildren(...items);
-  };
-  build();
-
-  document.body.appendChild(menu);
-
-  // posiziono il menù sotto il pulsante
-  const rect = anchorEl.getBoundingClientRect();
-  menu.style.top = `${rect.bottom + window.scrollY + 4}px`;
-  menu.style.left = `${rect.left + window.scrollX}px`;
-  const menuRect = menu.getBoundingClientRect();
-  if (menuRect.right > window.innerWidth) {
-    menu.style.left = `${window.innerWidth + window.scrollX - menuRect.width - 8}px`;
-  }
-
-  // chiudo cliccando fuori (aggancio ritardato per non chiudere subito)
-  const onDocClick = (event) => {
-    if (!menu.contains(event.target) && event.target !== anchorEl) {
-      menu.remove();
-      document.removeEventListener("click", onDocClick, true);
-    }
-  };
-  setTimeout(() => document.addEventListener("click", onDocClick, true), 0);
-};
-
-// qui mi creo il pulsante "+" che apre il menù: lo uso uguale in tutte le
-// pagine e diventa verde se il brano sta già in qualche playlist.
-const makeAddButton = (track, className) => {
-  const btn = document.createElement("button");
-  btn.className = className;
-  btn.textContent = "+";
-  btn.title = "Aggiungi a una playlist";
-  btn.setAttribute("aria-label", "Aggiungi a una playlist");
-
-  const sync = () => {
-    btn.classList.toggle("is-added", isTrackInAnyPlaylist(track.id));
-  };
-  sync();
-
-  btn.addEventListener("click", (event) => {
-    event.stopPropagation();
-    openPlaylistMenu(btn, track, sync);
-  });
-
-  return btn;
+  localStorage.setItem(STORAGE_KEY_PLAYLIST, JSON.stringify(playlist));
 };
 
 /* ============================ 6. Render sidebar ============================ */
@@ -943,51 +791,6 @@ const renderSidebarFavourites = () => {
       ...(favourites.length > 0
         ? favourites.map(buildFavItem)
         : [buildEmptyItem()]),
-    );
-  });
-};
-
-// qui riempio la sezione Playlist della sidebar: prima la voce per crearne una,
-// poi "Brani che ti piacciono", poi tutte le playlist che ho creato.
-const renderSidebarPlaylists = () => {
-  const tmplPlaylist = document.getElementById("tmpl-playlist-item");
-  const lists = document.querySelectorAll(
-    "#sidebar-playlists-list, #mobile-playlists-list",
-  );
-  if (!tmplPlaylist || lists.length === 0) return;
-
-  // qui costruisco la voce che, cliccata, apre la pagina della playlist
-  const buildLinkItem = (name, id) => {
-    const item = tmplPlaylist.content.firstElementChild.cloneNode(true);
-    item.querySelector(".playlist-name").textContent = name;
-    item.style.cursor = "pointer";
-    item.addEventListener("click", () => {
-      window.location.href = `playlist.html?id=${id}`;
-    });
-    return item;
-  };
-
-  // qui faccio la voce "Crea nuova playlist": chiedo il nome e la creo
-  const buildCreateItem = () => {
-    const item = tmplPlaylist.content.firstElementChild.cloneNode(true);
-    const ico = item.querySelector("span");
-    if (ico) ico.replaceChildren(document.createTextNode("+"));
-    item.style.cursor = "pointer";
-    const label = item.querySelector(".playlist-name");
-    label.textContent = "Crea nuova playlist";
-    label.classList.add("text-secondary");
-    item.addEventListener("click", () => {
-      const name = prompt("Nome della nuova playlist:");
-      if (name && name.trim()) createPlaylist(name.trim());
-    });
-    return item;
-  };
-
-  lists.forEach((list) => {
-    list.replaceChildren(
-      buildCreateItem(),
-      buildLinkItem("Brani che ti piacciono", PLAYLIST_FAVOURITES),
-      ...getPlaylists().map((p) => buildLinkItem(p.name, p.id)),
     );
   });
 };
