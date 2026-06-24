@@ -172,7 +172,6 @@ const renderRow = (rowTitle, tracks) => {
   container.replaceChildren(...tracks.map(buildCard));
 };
 // quando vai su invio salva il termine e vai alla pagina di ricerca dedicata
-// (search.js gestisce la ricerca vera con debounce, album e artisti)
 if (searchInput) {
   searchInput.addEventListener("keypress", (event) => {
     if (event.key === "Enter") {
