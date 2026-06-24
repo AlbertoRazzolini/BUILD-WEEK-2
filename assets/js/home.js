@@ -142,6 +142,11 @@ const buildCard = (track) => {
     btnFav.classList.toggle("is-fav", isFavourite(track.id));
   });
 
+  // qui attacco il mio "+" sulla card per mettere il brano in una playlist
+  card.querySelector(".card-image-wrap").appendChild(
+    makeAddButton(track, "card-add"),
+  );
+
   card.querySelector(".card-play").addEventListener("click", (event) => {
     event.stopPropagation();
     window.player.play(track);

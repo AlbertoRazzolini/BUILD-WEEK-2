@@ -111,10 +111,13 @@ const renderTracklist = (tracks) => {
       btnFav.classList.toggle("is-fav", isFavourite(track.id));
     });
 
+    // qui metto il mio "+" sulla riga per aggiungere il brano a una playlist
+    const btnAdd = makeAddButton(track, "track-add");
+
     const row = document.createElement("div");
     row.classList.add("track-row");
     row.dataset.id = track.id;
-    row.append(num, trackTitle, time, btnFav);
+    row.append(num, trackTitle, time, btnFav, btnAdd);
     row.addEventListener("click", () => player.play(track, tracks)); // MARCO- aggiunto ,tracks
 
     return row;
