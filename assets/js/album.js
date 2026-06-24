@@ -54,9 +54,14 @@ const renderHero = (album, firstTrack) => {
   title.className = "hero-title";
   title.textContent = album.title;
 
+  // nome artista come <a> separato per navigare su artist.html senza innerHTML
+  const artistLink = document.createElement("a");
+  artistLink.textContent = album.artist;
+  artistLink.href = `artist.html?id=${album.artistId}`;
+
   const sub = document.createElement("p");
   sub.className = "hero-sub";
-  sub.textContent = `${album.artist} · ${year} · ${album.trackCount} brani · ${formatTime(totalMs)}`;
+  sub.append(artistLink, ` · ${year} · ${album.trackCount} brani · ${formatTime(totalMs)}`);
 
   const btnPlay = document.createElement("button");
   btnPlay.className = "btn-play-big";

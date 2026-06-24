@@ -67,9 +67,12 @@ const renderTrackCard = (track) => {
   title.className = "card-title";
   title.textContent = track.title;
 
-  const sub = document.createElement("p");
+  // <a> invece di <p>: click su artista → artist.html; stopPropagation evita il play
+  const sub = document.createElement("a");
   sub.className = "card-sub";
   sub.textContent = track.artist;
+  sub.href = `artist.html?id=${track.artistId}`;
+  sub.addEventListener("click", (e) => e.stopPropagation());
 
   card.append(imageWrap, btnFav, title, sub);
   card.addEventListener("click", () => player.play(track));
@@ -92,9 +95,12 @@ const renderAlbumCard = (album) => {
   title.className = "card-title";
   title.textContent = album.title;
 
-  const sub = document.createElement("p");
+  // artista dell'album come link: click → artist.html; stopPropagation evita di attivare anche il click sull'intera card (album.html)
+  const sub = document.createElement("a");
   sub.className = "card-sub";
   sub.textContent = album.artist;
+  sub.href = `artist.html?id=${album.artistId}`;
+  sub.addEventListener("click", (e) => e.stopPropagation());
 
   card.append(imageWrap, title, sub);
   card.addEventListener("click", () => {

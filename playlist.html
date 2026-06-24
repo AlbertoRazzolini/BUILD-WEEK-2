@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EpiTunes — Cerca</title>
+    <title>EpiTunes — Playlist</title>
     <!-- Bootstrap CSS -->
     <link
       rel="stylesheet"
@@ -166,7 +166,6 @@
               id="search-input"
               class="search-input"
               placeholder="Cerca brani, album, artisti..."
-              autocomplete="off"
             />
           </div>
           <!-- Desktop: user pill — visibile da sm (576px) in su -->
@@ -182,28 +181,17 @@
           </button>
         </header>
 
-        <section class="search">
-          <!--
-            COSTRUISCI IN search.js:
-            - Debounce 400ms su "input" -> chiamata fetch a iTunes search
-            - Tre sezioni: brani, album, artisti (Promise.all con entity differenti)
-            - Salva ultima query in localStorage; al caricamento, riprendila
-            - Click su brano -> Player; click su album/artist -> album.html/artist.html?id=...
-          -->
-          <div class="search-results">
-            <section class="row" id="row-tracks" hidden>
-              <h2>Brani</h2>
-              <div class="grid" id="grid-tracks"></div>
-            </section>
-            <section class="row" id="row-albums" hidden>
-              <h2>Album</h2>
-              <div class="grid" id="grid-albums"></div>
-            </section>
-            <section class="row" id="row-artists" hidden>
-              <h2>Artisti</h2>
-              <div class="grid" id="grid-artists"></div>
-            </section>
-          </div>
+        <!--
+          COSTRUISCI IN playlist.js:
+          - Leggi l'id della playlist dalla query string con URLSearchParams
+          - Recupera la playlist da localStorage con getPlaylist()
+          - Se manca l'id o la playlist è vuota -> messaggio "Playlist non trovata"
+          - Hero: nome playlist + numero brani
+          - Tracklist: lista numerata di brani con titolo + artista + durata; click su brano -> Player
+        -->
+        <section class="playlist-page">
+          <div class="album-hero" id="playlist-hero"></div>
+          <div class="tracklist" id="playlist-tracklist"></div>
         </section>
       </main>
 
@@ -301,6 +289,6 @@
 
     <!-- Script EpiTunes -->
     <script src="assets/js/common.js"></script>
-    <script src="assets/js/search.js"></script>
+    <script src="assets/js/playlist.js"></script>
   </body>
 </html>
