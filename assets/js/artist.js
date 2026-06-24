@@ -21,6 +21,20 @@ const player = initPage("home");
 
 const artistHero = document.querySelector("#artist-hero");
 const topTracks  = document.querySelector("#top-tracks");
+const searchInput = document.getElementById("search-input");
+
+// quando vai su invio salva il termine e vai alla pagina di ricerca dedicata
+if (searchInput) {
+  searchInput.addEventListener("keypress", (event) => {
+    if (event.key === "Enter") {
+      const valoreCercato = event.target.value.trim();
+      if (valoreCercato !== "") {
+        localStorage.setItem(STORAGE_KEY_LAST_SEARCH, valoreCercato);
+        window.location.href = "search.html";
+      }
+    }
+  });
+}
 
 const showNotFound = () => {
   const msg = document.createElement("p");
