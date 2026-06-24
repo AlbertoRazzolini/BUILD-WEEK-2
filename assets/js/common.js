@@ -540,11 +540,18 @@ class Player {
       const percent = Math.max(0, Math.min(1, clickX / width));
       this.setVolume(percent); //applica il nuovo volume
     });
+
+    // listener per i controlli di navigazione (prev/next/shuffle/repeat)
+    btnPrev.addEventListener("click", () => this.prev());
+    btnNext.addEventListener("click", () => this.next());
+    btnShuffle.addEventListener("click", () => this.toggleShuffle());
+    btnRepeat.addEventListener("click", () => this.toggleRepeat());
   }
-  //ricevi il tarck di Apple e riproducilo
-  play(track) {
+  //ricevi il track di Apple e riproducilo; tracklist opzionale per next/prev
+  play(track, tracklist = []) {
     if (!track || !track.previewUrl) return;
     this.currentTrack = track;
+    if (tracklist.length > 0) this.currentTracklist = tracklist;
     this.audio.src = track.previewUrl;
     this.audio.play();
     this.isPlaying = true;
