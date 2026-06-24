@@ -307,127 +307,8 @@ class Player {
     const controls = document.createElement("div");
     controls.className = "player-controls";
     controls.append(btnShuffle, btnPrev, btnToggle, btnNext, btnRepeat);
-
-    const timeCurrent = document.createElement("span");
-    timeCurrent.id = "time-current";
-    timeCurrent.textContent = "0:00";
-
-    const progressFill = document.createElement("div");
-    progressFill.className = "progress-fill";
-    progressFill.id = "progress-fill";
-
-    const progressBar = document.createElement("div");
-    progressBar.className = "progress-bar";
-    progressBar.id = "progress-bar";
-    progressBar.appendChild(progressFill);
-
-    const timeTotal = document.createElement("span");
-    timeTotal.id = "time-total";
-    timeTotal.textContent = "0:00";
-
-    const progress = document.createElement("div");
-    progress.className = "player-progress";
-    progress.append(timeCurrent, progressBar, timeTotal);
-
-    const center = document.createElement("div");
-    center.className = "player-center";
-    center.append(controls, progress);
-
-    const volumeIcon = document.createElement("span");
-    volumeIcon.textContent = "🔊";
-
-    const volumeFill = document.createElement("div");
-    volumeFill.className = "volume-fill";
-    volumeFill.id = "volume-fill";
-    volumeFill.style.width = "80%";
-
-    const volumeBar = document.createElement("div");
-    volumeBar.className = "volume-bar";
-    volumeBar.id = "volume-bar";
-    volumeBar.appendChild(volumeFill);
-
-    const right = document.createElement("div");
-    right.className = "player-right";
-    right.append(volumeIcon, volumeBar);
-
-    footer.replaceChildren(track, center, right);
-
-    if (this.audio) {//volume di defalut all 80 %
-      this.audio.volume = 0.8;
-    }
-
-    btnToggle.addEventListener("click", () => this.togglePlay());//dai un listener al bottone play /pause
-
-    progressBar.addEventListener("click", (e) => {//listener per il click della barra del progresso della canzone
-      if (!this.currentTrack || !this.audio.duration) return;
-      const rect = progressBar.getBoundingClientRect();//dammi le coordinate della barra
-      const clickX = e.clientX - rect.left;//calcola dove ho toccato esattamente
-      const width = rect.width;//larghezza totale barra
-      const percent = clickX / width;//trasforma il click in percentuale
-      this.seek(percent);//sposta la riproduzione a quella percentuale
-    });
-
-    volumeBar.addEventListener("click", (e) => {//listener della barra del volume
-      const rect = volumeBar.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const width = rect.width;//sempre tra 0 e 1 massimo
-      const percent = Math.max(0, Math.min(1, clickX / width));
-      this.setVolume(percent);//applica il nuovo volume
-    });
   }
-//ricevi il tarck di Apple e riproducilo
-  play(track) {
-    if (!track || !track.previewUrl) return;
-    this.currentTrack = track;
-    this.audio.src = track.previewUrl;
-    this.audio.play();
-    this.isPlaying = true;
-//aggiorna tutta linterfaccia del footer con i nuovi dati del API della canzone da ascoltare
-    const coverImg = document.getElementById("player-cover-img");
-    const titleEl = document.getElementById("player-title");
-    const artistEl = document.getElementById("player-artist");
-    const totalEl = document.getElementById("time-total");
-    const btnToggle = document.getElementById("btn-toggle");
-
-    if (coverImg) coverImg.src = track.cover;
-    if (titleEl) titleEl.textContent = track.title;
-    if (artistEl) artistEl.textContent = track.artist;
-    if (totalEl) totalEl.textContent = formatTime(track.durationMs);
-    if (btnToggle) btnToggle.textContent = "⏸";
-
-    if (typeof addToHistory === "function") {
-      addToHistory(track);
-    }
-  }
-//comportamento del toggle delbottone play /pause
-  togglePlay() {
-    if (!this.currentTrack) return;
-    const btnToggle = document.getElementById("btn-toggle");
-    if (this.isPlaying) {
-      this.audio.pause();
-      this.isPlaying = false;
-      if (btnToggle) btnToggle.textContent = "▶";
-    } else {
-      this.audio.play();
-      this.isPlaying = true;
-      if (btnToggle) btnToggle.textContent = "⏸";
-    }
-  }
-//regola volume sempre tran 0 e 1
-  setVolume(v) {
-    if (!this.audio) return;
-    this.audio.volume = v;
-    const volumeFill = document.getElementById("volume-fill");
-    if (volumeFill) {
-      volumeFill.style.width = `${v * 100}%`;
-    }
-  }
-
-  seek(percent) {
-    if (!this.audio || !this.audio.duration) return;
-    this.audio.currentTime = percent * this.audio.duration;
-  }
-}
+};
 
 /* ============================ 5. localStorage helpers ============================ */
 
@@ -572,3 +453,4 @@ const initPage = (activePage) => {
 
   return player;
 };
+
