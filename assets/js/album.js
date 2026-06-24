@@ -62,7 +62,7 @@ const renderHero = (album, firstTrack) => {
   btnPlay.className = "btn-play-big";
   btnPlay.setAttribute("aria-label", "Play");
   btnPlay.textContent = "▶";
-  btnPlay.addEventListener("click", () => player.play(firstTrack));
+  btnPlay.addEventListener("click", () => player.play(firstTrack, tracks)); // MARCO- aggiunto ,tracks
 
   const btnFav = document.createElement("button");
   btnFav.className = "btn-fav-big";
@@ -114,7 +114,7 @@ const renderTracklist = (tracks) => {
     row.className = "track-row";
     row.dataset.id = track.id;
     row.append(num, trackTitle, time, btnFav);
-    row.addEventListener("click", () => player.play(track));
+    row.addEventListener("click", () => player.play(track, tracks)); // MARCO- aggiunto ,tracks
 
     return row;
   });
