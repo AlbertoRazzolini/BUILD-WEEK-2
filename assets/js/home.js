@@ -43,7 +43,7 @@ const API_URL = "https://itunes.apple.com/search";
       title: track.trackName,
       artist: track.artistName,
       cover: track.artworkUrl100,
-      audioUrl: track.previewUrl,
+      previewUrl: track.previewUrl,
       albumId: track.collectionId,
     }));*/
 const fetchTracksByTerm = async (term) => {
@@ -172,7 +172,6 @@ const renderRow = (rowTitle, tracks) => {
   container.replaceChildren(...tracks.map(buildCard));
 };
 // quando vai su invio salva il termine e vai alla pagina di ricerca dedicata
-// (search.js gestisce la ricerca vera con debounce, album e artisti)
 if (searchInput) {
   searchInput.addEventListener("keypress", (event) => {
     if (event.key === "Enter") {
