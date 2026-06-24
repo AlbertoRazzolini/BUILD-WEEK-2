@@ -334,37 +334,54 @@ class Artist {
 */
 class Player {
   constructor() {
-    this.audio = document.querySelector("#audio-element");//recupera tag audio a riga circa 225
-    this.currentTrack = null;//brano iniziale : nessuno
-    this.isPlaying = false;//riproduzione iniziale : nessuno
-
-    if (this.audio) {//attivalo durante tutta la durata del brano
-      this.audio.addEventListener("timeupdate", () => {
-        if (!this.audio.duration) return;//non attivarti se non ce nessun branp
-        const currentEl = document.getElementById("time-current");//seleziona testo tempo corrente a sinistra
-        const fillEl = document.getElementById("progress-fill");//seleziona barra progresso
-        if (currentEl) {//trasforma il vero tempo in formato da spotify
-          currentEl.textContent = formatTime(this.audio.currentTime * 1000);
-        }
-        if (fillEl) {//ascolta il vero avanzamento del brano e riempi la barra progresso
-          const percent = (this.audio.currentTime / this.audio.duration) * 100;
-          fillEl.style.width = `${percent}%`;
-        }
-      });
-//cosa succede qudnado il brano finisce
-      this.audio.addEventListener("ended", () => {
-        this.isPlaying = false;//non in riproduzione
-        const btnToggle = document.getElementById("btn-toggle");//prendi il pulsante play
-        if (btnToggle) btnToggle.textContent = "▶";//rimetti icona play al posto di pausa
-      });
+    // Sicurezza: se non c'è l'elemento audio nell'HTML, lo crea automaticamente
+    this.audio = document.querySelector("#audio-element");
+    if (!this.audio) {
+      this.audio = document.createElement("audio");
+      this.audio.id = "audio-element";
+      document.body.appendChild(this.audio);
     }
+
+    this.currentTrack = null;
+    this.isPlaying = false;
+    
+    // Stato per Shuffle e Repeat
+    this.currentTracklist = []; 
+    this.isShuffle = false;     
+    this.isRepeat = false;      
+    this.shufflePool = [];      
+
+    // Listener per aggiornare la barra del tempo
+    this.audio.addEventListener("timeupdate", () => {
+      if (!this.audio.duration) return;
+      const currentEl = document.getElementById("time-current");
+      const fillEl = document.getElementById("progress-fill");
+      if (currentEl) {
+        currentEl.textContent = formatTime(this.audio.currentTime * 1000);
+      }
+      if (fillEl) {
+        const percent = (this.audio.currentTime / this.audio.duration) * 100;
+        fillEl.style.width = `${percent}%`;
+      }
+    });
+
+    // Gestione automatica a fine canzone
+    this.audio.addEventListener("ended", () => {
+      if (this.currentTracklist.length > 1) {
+        this.next(); // Passa alla prossima se è un album
+      } else {
+        this.isPlaying = false;
+        const btnToggle = document.getElementById("btn-toggle");
+        if (btnToggle) btnToggle.textContent = "▶";
+      }
+    });
   }
-//TUTTO L'HTML CHE CI SERVE NEL NOSTRO PLAYER/FOOTER
+
   mount() {
     const footer = document.querySelector(".player");
     if (!footer) return;
-    //struttura spotify
 
+    // --- Costruzione UI (come l'originale) ---
     const coverImg = document.createElement("img");
     coverImg.id = "player-cover-img";
     coverImg.alt = "";
@@ -455,7 +472,7 @@ class Player {
     const volumeFill = document.createElement("div");
     volumeFill.className = "volume-fill";
     volumeFill.id = "volume-fill";
-    volumeFill.style.width = "50%";
+    volumeFill.style.width = "80%";
 
     const volumeBar = document.createElement("div");
     volumeBar.className = "volume-bar";
@@ -469,36 +486,44 @@ class Player {
     footer.replaceChildren(track, center, right);
 
     if (this.audio) {
-      this.audio.volume = 0.5;
+      this.audio.volume = 0.8;
     }
 
-    btnToggle.addEventListener("click", () => this.togglePlay());//dai un listener al bottone play /pause
+    // --- LISTENER PULSANTI ---
+    btnToggle.addEventListener("click", () => this.togglePlay());
+    btnShuffle.addEventListener("click", () => this.toggleShuffle());
+    btnRepeat.addEventListener("click", () => this.toggleRepeat());
+    btnNext.addEventListener("click", () => this.next());
+    btnPrev.addEventListener("click", () => this.prev());
 
-    progressBar.addEventListener("click", (e) => {//listener per il click della barra del progresso della canzone
+    progressBar.addEventListener("click", (e) => {
       if (!this.currentTrack || !this.audio.duration) return;
-      const rect = progressBar.getBoundingClientRect();//dammi le coordinate della barra
-      const clickX = e.clientX - rect.left;//calcola dove ho toccato esattamente
-      const width = rect.width;//larghezza totale barra
-      const percent = clickX / width;//trasforma il click in percentuale
-      this.seek(percent);//sposta la riproduzione a quella percentuale
+      const rect = progressBar.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const width = rect.width;
+      const percent = clickX / width;
+      this.seek(percent);
     });
 
-    volumeBar.addEventListener("click", (e) => {//listener della barra del volume
+    volumeBar.addEventListener("click", (e) => {
       const rect = volumeBar.getBoundingClientRect();
       const clickX = e.clientX - rect.left;
-      const width = rect.width;//sempre tra 0 e 1 massimo
+      const width = rect.width;
       const percent = Math.max(0, Math.min(1, clickX / width));
-      this.setVolume(percent);//applica il nuovo volume
+      this.setVolume(percent);
     });
   }
-//ricevi il tarck di Apple e riproducilo
-  play(track) {
+
+  play(track, tracklist = []) {
     if (!track || !track.previewUrl) return;
     this.currentTrack = track;
     this.audio.src = track.previewUrl;
     this.audio.play();
     this.isPlaying = true;
-//aggiorna tutta linterfaccia del footer con i nuovi dati del API della canzone da ascoltare
+
+    this.currentTracklist = tracklist.length > 0 ? tracklist : [track];
+    this.shufflePool = this.shufflePool.filter(id => id !== track.id);
+
     const coverImg = document.getElementById("player-cover-img");
     const titleEl = document.getElementById("player-title");
     const artistEl = document.getElementById("player-artist");
@@ -515,10 +540,12 @@ class Player {
       addToHistory(track);
     }
   }
-//comportamento del toggle delbottone play /pause
+
   togglePlay() {
+    // Se non c'è nessuna canzone caricata, non fa nulla
     if (!this.currentTrack) return;
     const btnToggle = document.getElementById("btn-toggle");
+    
     if (this.isPlaying) {
       this.audio.pause();
       this.isPlaying = false;
@@ -529,7 +556,7 @@ class Player {
       if (btnToggle) btnToggle.textContent = "⏸";
     }
   }
-//regola volume sempre tran 0 e 1
+
   setVolume(v) {
     if (!this.audio) return;
     this.audio.volume = v;
@@ -542,6 +569,67 @@ class Player {
   seek(percent) {
     if (!this.audio || !this.audio.duration) return;
     this.audio.currentTime = percent * this.audio.duration;
+  }
+
+  toggleShuffle() {
+    this.isShuffle = !this.isShuffle;
+    const btn = document.getElementById("btn-shuffle");
+    if (btn) btn.style.color = this.isShuffle ? "#1db954" : ""; 
+    if (this.isShuffle) this.initShufflePool();
+  }
+
+  toggleRepeat() {
+    this.isRepeat = !this.isRepeat;
+    if (this.audio) {
+      this.audio.loop = this.isRepeat; 
+    }
+    const btn = document.getElementById("btn-repeat");
+    if (btn) {
+      btn.style.color = this.isRepeat ? "#1db954" : ""; 
+    }
+  }
+
+  initShufflePool() {
+    this.shufflePool = this.currentTracklist
+      .map(t => t.id)
+      .filter(id => id !== (this.currentTrack ? this.currentTrack.id : null));
+  }
+
+  next() {
+    if (this.currentTracklist.length <= 1) {
+      this.seek(0);
+      return;
+    }
+
+    if (this.isShuffle) {
+      if (this.shufflePool.length === 0) {
+        this.initShufflePool();
+        if (this.shufflePool.length === 0) {
+          this.seek(0);
+          return;
+        }
+      }
+      const randomIndex = Math.floor(Math.random() * this.shufflePool.length);
+      const nextTrackId = this.shufflePool[randomIndex];
+      this.shufflePool.splice(randomIndex, 1);
+
+      const nextTrack = this.currentTracklist.find(t => t.id === nextTrackId);
+      if (nextTrack) this.play(nextTrack, this.currentTracklist);
+    } else {
+      const currentIndex = this.currentTracklist.findIndex(t => t.id === this.currentTrack.id);
+      const nextIndex = (currentIndex + 1) % this.currentTracklist.length;
+      this.play(this.currentTracklist[nextIndex], this.currentTracklist);
+    }
+  }
+
+  prev() {
+    if (this.currentTracklist.length <= 1 || this.audio.currentTime > 3) {
+      this.seek(0);
+      return;
+    }
+    const currentIndex = this.currentTracklist.findIndex(t => t.id === this.currentTrack.id);
+    const prevIndex = (currentIndex - 1 + this.currentTracklist.length) % this.currentTracklist.length;
+    this.play(this.currentTracklist[prevIndex], this.currentTracklist);
   }
 }
 
@@ -691,3 +779,4 @@ const initPage = (activePage) => {
 
   return player;
 };
+
