@@ -43,7 +43,7 @@ const API_URL = "https://itunes.apple.com/search";
       title: track.trackName,
       artist: track.artistName,
       cover: track.artworkUrl100,
-      audioUrl: track.previewUrl,
+      previewUrl: track.previewUrl,
       albumId: track.collectionId,
     }));*/
 const fetchTracksByTerm = async (term) => {
