@@ -61,6 +61,8 @@
 const API_BASE = "https://itunes.apple.com";
 const STORAGE_KEY_HISTORY = "epitunes_history";
 const STORAGE_KEY_FAVOURITES = "epitunes_favourites";
+const STORAGE_KEY_PLAYLIST = "epitunes_playlist"; // la mia vecchia chiave (la tengo solo per la migrazione)
+const STORAGE_KEY_PLAYLISTS = "epitunes_playlists"; // qui salvo tutte le playlist che creo
 const STORAGE_KEY_LAST_SEARCH = "epitunes_last_search";
 const STORAGE_KEY_PLAYLIST = "epitunes_playlist"; // brani aggiunti manualmente dall'utente (Lucio legge questa chiave per i container playlist)
 const MAX_HISTORY = 12;
@@ -176,6 +178,7 @@ const myFunction = () => {
             mapaArtistas.set(track.artistId, {
               id: track.artistId,
               title: track.artist,
+              cover: track.cover, // MARCO - aggiungo track.cover per selezionare anche l'immagine
             });
           }
         });
@@ -244,7 +247,12 @@ const renderResultados = (lista, tipo) => {
       });
     } else if (tipo === "artisti") {
       const img = item.querySelector(".artist-cover");
-      if (img) img.alt = elemento.title;
+      // if (img) img.alt = elemento.title;
+      if (img) {
+        // MARCO - così facendo diciamo all'immagine quale foto caricare
+        img.src = elemento.cover || "https://placehold.co/40x40";
+        img.alt = elemento.title;
+      }
       item.querySelector(".artist-name").textContent = elemento.title;
       // cliccando l'artista vado sulla sua pagina
       item.addEventListener("click", () => {
@@ -359,18 +367,52 @@ class Player {
         if (btnToggle) btnToggle.textContent = "▶"; //rimetti icona play al posto di pausa
       });
     }
+
+    this.currentTrack = null;
+    this.isPlaying = false;
+
+    // Stato per Shuffle e Repeat
+    this.currentTracklist = [];
+    this.isShuffle = false;
+    this.isRepeat = false;
+    this.shufflePool = [];
+
+    // Listener per aggiornare la barra del tempo
+    this.audio.addEventListener("timeupdate", () => {
+      if (!this.audio.duration) return;
+      const currentEl = document.getElementById("time-current");
+      const fillEl = document.getElementById("progress-fill");
+      if (currentEl) {
+        currentEl.textContent = formatTime(this.audio.currentTime * 1000);
+      }
+      if (fillEl) {
+        const percent = (this.audio.currentTime / this.audio.duration) * 100;
+        fillEl.style.width = `${percent}%`;
+      }
+    });
+
+    // Gestione automatica a fine canzone
+    this.audio.addEventListener("ended", () => {
+      if (this.currentTracklist.length > 1) {
+        this.next(); // Passa alla prossima se è un album
+      } else {
+        this.isPlaying = false;
+        const btnToggle = document.getElementById("btn-toggle");
+        if (btnToggle) btnToggle.textContent = "▶";
+      }
+    });
   }
   //TUTTO L'HTML CHE CI SERVE NEL NOSTRO PLAYER/FOOTER
   mount() {
     const footer = document.querySelector(".player");
     if (!footer) return;
-    //struttura spotify
 
+    // --- Costruzione UI (come l'originale) ---
     const coverImg = document.createElement("img");
     coverImg.id = "player-cover-img";
     coverImg.alt = "";
     const cover = document.createElement("div");
-    cover.className = "player-cover";
+    cover.classList.add("player-cover");
     cover.appendChild(coverImg);
 
     // <a> invece di <p>: play() imposta href verso album.html / artist.html al cambio brano
@@ -385,45 +427,45 @@ class Player {
     artist.textContent = "—";
 
     const meta = document.createElement("div");
-    meta.className = "player-meta";
+    meta.classList.add("player-meta");
     meta.append(title, artist);
 
     const track = document.createElement("div");
-    track.className = "player-track";
+    track.classList.add("player-track");
     track.append(cover, meta);
 
     const btnShuffle = document.createElement("button");
-    btnShuffle.className = "btn-ctrl";
+    btnShuffle.classList.add("btn-ctrl");
     btnShuffle.id = "btn-shuffle";
     btnShuffle.setAttribute("aria-label", "Shuffle");
     btnShuffle.textContent = "⇄";
 
     const btnPrev = document.createElement("button");
-    btnPrev.className = "btn-ctrl";
+    btnPrev.classList.add("btn-ctrl");
     btnPrev.id = "btn-prev";
     btnPrev.setAttribute("aria-label", "Precedente");
     btnPrev.textContent = "⏮";
 
     const btnToggle = document.createElement("button");
-    btnToggle.className = "btn-play";
+    btnToggle.classList.add("btn-play");
     btnToggle.id = "btn-toggle";
     btnToggle.setAttribute("aria-label", "Play/Pausa");
     btnToggle.textContent = "▶";
 
     const btnNext = document.createElement("button");
-    btnNext.className = "btn-ctrl";
+    btnNext.classList.add("btn-ctrl");
     btnNext.id = "btn-next";
     btnNext.setAttribute("aria-label", "Successivo");
     btnNext.textContent = "⏭";
 
     const btnRepeat = document.createElement("button");
-    btnRepeat.className = "btn-ctrl";
+    btnRepeat.classList.add("btn-ctrl");
     btnRepeat.id = "btn-repeat";
     btnRepeat.setAttribute("aria-label", "Ripeti");
     btnRepeat.textContent = "↻";
 
     const controls = document.createElement("div");
-    controls.className = "player-controls";
+    controls.classList.add("player-controls");
     controls.append(btnShuffle, btnPrev, btnToggle, btnNext, btnRepeat);
 
     const timeCurrent = document.createElement("span");
@@ -431,11 +473,11 @@ class Player {
     timeCurrent.textContent = "0:00";
 
     const progressFill = document.createElement("div");
-    progressFill.className = "progress-fill";
+    progressFill.classList.add("progress-fill");
     progressFill.id = "progress-fill";
 
     const progressBar = document.createElement("div");
-    progressBar.className = "progress-bar";
+    progressBar.classList.add("progress-bar");
     progressBar.id = "progress-bar";
     progressBar.appendChild(progressFill);
 
@@ -444,34 +486,38 @@ class Player {
     timeTotal.textContent = "0:00";
 
     const progress = document.createElement("div");
-    progress.className = "player-progress";
+    progress.classList.add("player-progress");
     progress.append(timeCurrent, progressBar, timeTotal);
 
     const center = document.createElement("div");
-    center.className = "player-center";
+    center.classList.add("player-center");
     center.append(controls, progress);
 
     const volumeIcon = document.createElement("span");
     volumeIcon.textContent = "🔊";
 
     const volumeFill = document.createElement("div");
-    volumeFill.className = "volume-fill";
+    volumeFill.classList.add("volume-fill");
     volumeFill.id = "volume-fill";
-    volumeFill.style.width = "50%";
+    volumeFill.style.width = "80%";
 
     const volumeBar = document.createElement("div");
-    volumeBar.className = "volume-bar";
+    volumeBar.classList.add("volume-bar");
     volumeBar.id = "volume-bar";
     volumeBar.appendChild(volumeFill);
 
     const right = document.createElement("div");
-    right.className = "player-right";
+    right.classList.add("player-right");
     right.append(volumeIcon, volumeBar);
 
     footer.replaceChildren(track, center, right);
 
     if (this.audio) {
-      this.audio.volume = 0.5;
+      const savedVolume = parseFloat(localStorage.getItem(STORAGE_KEY_VOLUME));
+      const initialVolume = Number.isNaN(savedVolume)
+        ? 0.5
+        : Math.max(0, Math.min(1, savedVolume));
+      this.setVolume(initialVolume);
     }
 
     btnToggle.addEventListener("click", () => this.togglePlay()); //dai un listener al bottone play /pause
@@ -527,8 +573,10 @@ class Player {
   }
   //comportamento del toggle delbottone play /pause
   togglePlay() {
+    // Se non c'è nessuna canzone caricata, non fa nulla
     if (!this.currentTrack) return;
     const btnToggle = document.getElementById("btn-toggle");
+
     if (this.isPlaying) {
       this.audio.pause();
       this.isPlaying = false;
@@ -547,11 +595,79 @@ class Player {
     if (volumeFill) {
       volumeFill.style.width = `${v * 100}%`;
     }
+    localStorage.setItem(STORAGE_KEY_VOLUME, v.toString());
   }
 
   seek(percent) {
     if (!this.audio || !this.audio.duration) return;
     this.audio.currentTime = percent * this.audio.duration;
+  }
+
+  toggleShuffle() {
+    this.isShuffle = !this.isShuffle;
+    const btn = document.getElementById("btn-shuffle");
+    if (btn) btn.style.color = this.isShuffle ? "#1db954" : "";
+    if (this.isShuffle) this.initShufflePool();
+  }
+
+  toggleRepeat() {
+    this.isRepeat = !this.isRepeat;
+    if (this.audio) {
+      this.audio.loop = this.isRepeat;
+    }
+    const btn = document.getElementById("btn-repeat");
+    if (btn) {
+      btn.style.color = this.isRepeat ? "#1db954" : "";
+    }
+  }
+
+  initShufflePool() {
+    this.shufflePool = this.currentTracklist
+      .map((t) => t.id)
+      .filter((id) => id !== (this.currentTrack ? this.currentTrack.id : null));
+  }
+
+  next() {
+    if (this.currentTracklist.length <= 1) {
+      this.seek(0);
+      return;
+    }
+
+    if (this.isShuffle) {
+      if (this.shufflePool.length === 0) {
+        this.initShufflePool();
+        if (this.shufflePool.length === 0) {
+          this.seek(0);
+          return;
+        }
+      }
+      const randomIndex = Math.floor(Math.random() * this.shufflePool.length);
+      const nextTrackId = this.shufflePool[randomIndex];
+      this.shufflePool.splice(randomIndex, 1);
+
+      const nextTrack = this.currentTracklist.find((t) => t.id === nextTrackId);
+      if (nextTrack) this.play(nextTrack, this.currentTracklist);
+    } else {
+      const currentIndex = this.currentTracklist.findIndex(
+        (t) => t.id === this.currentTrack.id,
+      );
+      const nextIndex = (currentIndex + 1) % this.currentTracklist.length;
+      this.play(this.currentTracklist[nextIndex], this.currentTracklist);
+    }
+  }
+
+  prev() {
+    if (this.currentTracklist.length <= 1 || this.audio.currentTime > 3) {
+      this.seek(0);
+      return;
+    }
+    const currentIndex = this.currentTracklist.findIndex(
+      (t) => t.id === this.currentTrack.id,
+    );
+    const prevIndex =
+      (currentIndex - 1 + this.currentTracklist.length) %
+      this.currentTracklist.length;
+    this.play(this.currentTracklist[prevIndex], this.currentTracklist);
   }
 }
 
@@ -651,7 +767,7 @@ const renderSidebarFavourites = () => {
   const buildEmptyItem = () => {
     const li = document.createElement("li");
     const span = document.createElement("span");
-    span.className = "dropdown-item text-secondary";
+    span.classList.add("dropdown-item", "text-secondary");
     span.textContent = "Nessuno ancora";
     li.appendChild(span);
     return li;
@@ -717,7 +833,9 @@ const initPage = (activePage) => {
 
   window.player = player;
 
+  migrateOldPlaylist();
   renderSidebarFavourites();
+  renderSidebarPlaylists();
 
   // attivo i miei badge filtro (altrimenti i bottoni non fanno niente)
   myFunction();

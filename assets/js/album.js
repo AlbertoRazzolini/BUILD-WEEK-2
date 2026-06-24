@@ -27,6 +27,7 @@ const player = initPage("home");
 
 const albumHero  = document.querySelector("#album-hero");
 const tracklist  = document.querySelector("#tracklist");
+const searchInput = document.getElementById("search-input");
 
 const showNotFound = () => {
   const msg = document.createElement("p");
@@ -40,18 +41,18 @@ const renderHero = (album, firstTrack) => {
   const totalMs = album.tracks.reduce((sum, t) => sum + (t.durationMs || 0), 0);
 
   const cover = document.createElement("div");
-  cover.className = "album-cover";
+  cover.classList.add("album-cover");
   const coverImg = document.createElement("img");
   coverImg.src = bigArt(album.cover);
   coverImg.alt = album.title;
   cover.appendChild(coverImg);
 
   const kicker = document.createElement("p");
-  kicker.className = "hero-kicker";
+  kicker.classList.add("hero-kicker");
   kicker.textContent = "ALBUM";
 
   const title = document.createElement("h1");
-  title.className = "hero-title";
+  title.classList.add("hero-title");
   title.textContent = album.title;
 
   // nome artista come <a> separato per navigare su artist.html senza innerHTML
@@ -64,13 +65,13 @@ const renderHero = (album, firstTrack) => {
   sub.append(artistLink, ` · ${year} · ${album.trackCount} brani · ${formatTime(totalMs)}`);
 
   const btnPlay = document.createElement("button");
-  btnPlay.className = "btn-play-big";
+  btnPlay.classList.add("btn-play-big");
   btnPlay.setAttribute("aria-label", "Play");
   btnPlay.textContent = "▶";
-  btnPlay.addEventListener("click", () => player.play(firstTrack));
+  btnPlay.addEventListener("click", () => player.play(firstTrack, tracks)); // MARCO- aggiunto ,tracks
 
   const btnFav = document.createElement("button");
-  btnFav.className = "btn-fav-big";
+  btnFav.classList.add("btn-fav-big");
   btnFav.classList.toggle("is-fav", isFavourite(firstTrack.id));
   btnFav.setAttribute("aria-label", "Preferito");
   btnFav.textContent = "♥";
@@ -80,11 +81,11 @@ const renderHero = (album, firstTrack) => {
   });
 
   const actions = document.createElement("div");
-  actions.className = "hero-actions";
+  actions.classList.add("hero-actions");
   actions.append(btnPlay, btnFav);
 
   const meta = document.createElement("div");
-  meta.className = "hero-meta";
+  meta.classList.add("hero-meta");
   meta.append(kicker, title, sub, actions);
 
   albumHero.replaceChildren(cover, meta);
@@ -93,19 +94,19 @@ const renderHero = (album, firstTrack) => {
 const renderTracklist = (tracks) => {
   const rows = tracks.map((track, index) => {
     const num = document.createElement("span");
-    num.className = "track-num";
+    num.classList.add("track-num");
     num.textContent = String(index + 1);
 
     const trackTitle = document.createElement("span");
-    trackTitle.className = "track-title";
+    trackTitle.classList.add("track-title");
     trackTitle.textContent = track.title;
 
     const time = document.createElement("span");
-    time.className = "track-time";
+    time.classList.add("track-time");
     time.textContent = formatTime(track.durationMs);
 
     const btnFav = document.createElement("button");
-    btnFav.className = "track-fav";
+    btnFav.classList.add("track-fav");
     btnFav.classList.toggle("is-fav", isFavourite(track.id));
     btnFav.setAttribute("aria-label", "Preferito");
     btnFav.textContent = "♥";
@@ -115,11 +116,14 @@ const renderTracklist = (tracks) => {
       btnFav.classList.toggle("is-fav", isFavourite(track.id));
     });
 
+    // qui metto il mio "+" sulla riga per aggiungere il brano a una playlist
+    const btnAdd = makeAddButton(track, "track-add");
+
     const row = document.createElement("div");
-    row.className = "track-row";
+    row.classList.add("track-row");
     row.dataset.id = track.id;
-    row.append(num, trackTitle, time, btnFav);
-    row.addEventListener("click", () => player.play(track));
+    row.append(num, trackTitle, time, btnFav, btnAdd);
+    row.addEventListener("click", () => player.play(track, tracks)); // MARCO- aggiunto ,tracks
 
     return row;
   });
@@ -155,5 +159,20 @@ const loadAlbum = async () => {
   renderHero(album, tracks[0]);
   renderTracklist(tracks);
 };
+
+// appena digiti almeno 3 lettere, salva il termine e vai alla pagina di ricerca dedicata
+const goToSearch = (term) => {
+  if (term.length >= 1) {
+    localStorage.setItem(STORAGE_KEY_LAST_SEARCH, term);
+    window.location.href = "search.html";
+  }
+};
+const debouncedGoToSearch = debounce(goToSearch, 400);
+
+if (searchInput) {
+  searchInput.addEventListener("input", (event) => {
+    debouncedGoToSearch(event.target.value.trim());
+  });
+}
 
 loadAlbum();
