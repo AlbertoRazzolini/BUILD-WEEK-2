@@ -708,6 +708,52 @@ button {
   width: 120px;
 }
 
+/* ============================ Carosello con frecce ============================ */
+
+/* wrapper relativo: serve come riferimento per il posizionamento assoluto dei bottoni */
+.row-scroller {
+  position: relative;
+}
+
+/* nasconde la scrollbar in tutti i browser, mantenendo lo scroll funzionale:
+   scrollbar-width → Firefox
+   -ms-overflow-style → IE / Edge legacy
+   ::-webkit-scrollbar → Chrome, Safari, Edge moderno */
+.row-scroller .d-flex {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.row-scroller .d-flex::-webkit-scrollbar {
+  display: none;
+}
+
+/* bottone freccia: centrato verticalmente sul carosello, appare solo su hover della riga */
+.row-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 22px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none; /* non intercetta click quando invisibile */
+}
+.row-scroller:hover .row-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+.row-btn-prev { left: 0; }
+.row-btn-next { right: 0; }
+
 /* ============================ Loading / empty ============================ */
 
 .loader {

@@ -238,6 +238,25 @@ if (searchInput) {
   });
 }
 
+// attacca i listener ai bottoni < > di ogni .row-scroller già presenti nell'HTML
+// chiamata prima di loadHome così i listener sono pronti quando le card vengono inserite
+const initRowNav = () => {
+  document.querySelectorAll(".row-scroller").forEach((scroller) => {
+    const list = scroller.querySelector(".d-flex");
+    if (!list) return;
+    // calcola lo scroll di una card alla volta in modo dinamico:
+    // offsetWidth della prima card + gap-3 Bootstrap (1rem = 16px)
+    const getAmt = () => (list.firstElementChild?.offsetWidth ?? 160) + 16;
+    scroller.querySelector(".row-btn-prev")?.addEventListener("click", () =>
+      list.scrollBy({ left: -getAmt(), behavior: "smooth" })
+    );
+    scroller.querySelector(".row-btn-next")?.addEventListener("click", () =>
+      list.scrollBy({ left: getAmt(), behavior: "smooth" })
+    );
+  });
+};
+
+initRowNav();
 loadHome();
 
 //da qui lucio deve creare la funzione dei filtri e fargli un eventlistener
