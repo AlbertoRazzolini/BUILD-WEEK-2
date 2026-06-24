@@ -65,6 +65,8 @@ const STORAGE_KEY_PLAYLIST = "epitunes_playlist"; // singola playlist (migrazion
 const STORAGE_KEY_PLAYLISTS = "epitunes_playlists"; // playlist multiple con nome — struttura: [{id, name, tracks}]
 const STORAGE_KEY_LAST_SEARCH = "epitunes_last_search";
 const STORAGE_KEY_VOLUME = "epitunes_volume"; // volume salvato tra sessioni (Cris)
+const STORAGE_KEY_SHUFFLE = "epitunes_shuffle";
+const STORAGE_KEY_REPEAT = "epitunes_repeat";
 const MAX_HISTORY = 12;
 
 /* ============================ 2. Helpers ============================ */
@@ -344,38 +346,18 @@ class Player {
     this.currentTrack = null; //brano iniziale : nessuno
     this.isPlaying = false; //riproduzione iniziale : nessuno
 
-    if (this.audio) {
-      //attivalo durante tutta la durata del brano
-      this.audio.addEventListener("timeupdate", () => {
-        if (!this.audio.duration) return; //non attivarti se non ce nessun branp
-        const currentEl = document.getElementById("time-current"); //seleziona testo tempo corrente a sinistra
-        const fillEl = document.getElementById("progress-fill"); //seleziona barra progresso
-        if (currentEl) {
-          //trasforma il vero tempo in formato da spotify
-          currentEl.textContent = formatTime(this.audio.currentTime * 1000);
-        }
-        if (fillEl) {
-          //ascolta il vero avanzamento del brano e riempi la barra progresso
-          const percent = (this.audio.currentTime / this.audio.duration) * 100;
-          fillEl.style.width = `${percent}%`;
-        }
-      });
-      //cosa succede qudnado il brano finisce
-      this.audio.addEventListener("ended", () => {
-        this.isPlaying = false; //non in riproduzione
-        const btnToggle = document.getElementById("btn-toggle"); //prendi il pulsante play
-        if (btnToggle) btnToggle.textContent = "▶"; //rimetti icona play al posto di pausa
-      });
-    }
-
-    this.currentTrack = null;
-    this.isPlaying = false;
-
-    // Stato per Shuffle e Repeat
+    // Stato per Shuffle e Repeat — ripristinato da localStorage per restare attivo tra una pagina e l'altra
     this.currentTracklist = [];
-    this.isShuffle = false;
-    this.isRepeat = false;
+    this.isShuffle = localStorage.getItem(STORAGE_KEY_SHUFFLE) === "true";
+    this.isRepeat = localStorage.getItem(STORAGE_KEY_REPEAT) === "true";
     this.shufflePool = [];
+
+    // volume da ripristinare quando si disattiva il muto
+    this.volumeBeforeMute = 0.5;
+
+    if (!this.audio) return;
+
+    this.audio.loop = this.isRepeat;
 
     // Listener per aggiornare la barra del tempo
     this.audio.addEventListener("timeupdate", () => {
@@ -399,6 +381,7 @@ class Player {
         this.isPlaying = false;
         const btnToggle = document.getElementById("btn-toggle");
         if (btnToggle) btnToggle.textContent = "▶";
+        this.updateNowPlayingUI();
       }
     });
   }
@@ -439,6 +422,7 @@ class Player {
     btnShuffle.id = "btn-shuffle";
     btnShuffle.setAttribute("aria-label", "Shuffle");
     btnShuffle.textContent = "⇄";
+    btnShuffle.style.color = this.isShuffle ? "#1db954" : ""; // riflette lo stato ripristinato da localStorage
 
     const btnPrev = document.createElement("button");
     btnPrev.classList.add("btn-ctrl");
@@ -463,6 +447,7 @@ class Player {
     btnRepeat.id = "btn-repeat";
     btnRepeat.setAttribute("aria-label", "Ripeti");
     btnRepeat.textContent = "↻";
+    btnRepeat.style.color = this.isRepeat ? "#1db954" : ""; // riflette lo stato ripristinato da localStorage
 
     const controls = document.createElement("div");
     controls.classList.add("player-controls");
@@ -493,7 +478,10 @@ class Player {
     center.classList.add("player-center");
     center.append(controls, progress);
 
-    const volumeIcon = document.createElement("span");
+    const volumeIcon = document.createElement("button");
+    volumeIcon.classList.add("btn-ctrl");
+    volumeIcon.id = "btn-mute";
+    volumeIcon.setAttribute("aria-label", "Muto");
     volumeIcon.textContent = "🔊";
 
     const volumeFill = document.createElement("div");
@@ -522,24 +510,45 @@ class Player {
 
     btnToggle.addEventListener("click", () => this.togglePlay()); //dai un listener al bottone play /pause
 
-    progressBar.addEventListener("click", (e) => {
-      //listener per il click della barra del progresso della canzone
+    //percentuale (0-1) del punto orizzontale cliccato/trascinato dentro la barra
+    const percentFromEvent = (bar, e) => {
+      const rect = bar.getBoundingClientRect();
+      return Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    };
+
+    let isDraggingProgress = false;
+    const updateProgress = (e) => {
       if (!this.currentTrack || !this.audio.duration) return;
-      const rect = progressBar.getBoundingClientRect(); //dammi le coordinate della barra
-      const clickX = e.clientX - rect.left; //calcola dove ho toccato esattamente
-      const width = rect.width; //larghezza totale barra
-      const percent = clickX / width; //trasforma il click in percentuale
-      this.seek(percent); //sposta la riproduzione a quella percentuale
+      const percent = percentFromEvent(progressBar, e);
+      progressFill.style.width = `${percent * 100}%`; //feedback visivo immediato durante il trascinamento
+      this.seek(percent);
+    };
+    progressBar.addEventListener("mousedown", (e) => {
+      isDraggingProgress = true;
+      updateProgress(e);
     });
 
-    volumeBar.addEventListener("click", (e) => {
-      //listener della barra del volume
-      const rect = volumeBar.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const width = rect.width; //sempre tra 0 e 1 massimo
-      const percent = Math.max(0, Math.min(1, clickX / width));
-      this.setVolume(percent); //applica il nuovo volume
+    let isDraggingVolume = false;
+    const updateVolume = (e) => {
+      this.setVolume(percentFromEvent(volumeBar, e));
+    };
+    volumeBar.addEventListener("mousedown", (e) => {
+      isDraggingVolume = true;
+      updateVolume(e);
     });
+
+    //il trascinamento continua anche se il mouse esce dai confini della barra
+    document.addEventListener("mousemove", (e) => {
+      if (isDraggingProgress) updateProgress(e);
+      if (isDraggingVolume) updateVolume(e);
+    });
+    document.addEventListener("mouseup", () => {
+      isDraggingProgress = false;
+      isDraggingVolume = false;
+    });
+
+    // bottone muto: clicca l'icona del volume per silenziare/ripristinare
+    volumeIcon.addEventListener("click", () => this.toggleMute());
 
     // listener per i controlli di navigazione (prev/next/shuffle/repeat)
     btnPrev.addEventListener("click", () => this.prev());
@@ -577,6 +586,8 @@ class Player {
     if (typeof addToHistory === "function") {
       addToHistory(track);
     }
+
+    this.updateNowPlayingUI();
   }
   //comportamento del toggle delbottone play /pause
   togglePlay() {
@@ -593,16 +604,70 @@ class Player {
       this.isPlaying = true;
       if (btnToggle) btnToggle.textContent = "⏸";
     }
+    this.updateNowPlayingUI();
+  }
+
+  // .card-play può contenere testo semplice (search.js) o un <ion-icon> (card clonate da #tmpl-card in home.js):
+  // gestisce entrambi i casi invece di sovrascrivere sempre con textContent
+  setCardPlayIcon(btnPlay, isPlaying) {
+    const icon = btnPlay.querySelector("ion-icon");
+    if (icon) {
+      icon.setAttribute("name", isPlaying ? "pause-outline" : "play-outline");
+    } else {
+      btnPlay.textContent = isPlaying ? "⏸" : "▶";
+    }
+  }
+
+  // evidenzia in verde la riga/card del brano corrente e mostra ▶/⏸ su tutte le sue card
+  // (querySelectorAll anche per le card: lo stesso brano può comparire in più righe della Home)
+  updateNowPlayingUI() {
+    document.querySelectorAll(".track-row.is-playing").forEach((el) => {
+      el.classList.remove("is-playing");
+    });
+    document.querySelectorAll(".card-play.is-playing").forEach((el) => {
+      el.classList.remove("is-playing");
+      this.setCardPlayIcon(el, false);
+    });
+
+    if (!this.currentTrack) return;
+
+    document
+      .querySelectorAll(`.track-row[data-id="${this.currentTrack.id}"]`)
+      .forEach((el) => el.classList.add("is-playing"));
+
+    document
+      .querySelectorAll(`.card[data-id="${this.currentTrack.id}"] .card-play`)
+      .forEach((btnPlay) => {
+        btnPlay.classList.add("is-playing");
+        this.setCardPlayIcon(btnPlay, this.isPlaying);
+      });
   }
   //regola volume sempre tran 0 e 1
   setVolume(v) {
     if (!this.audio) return;
     this.audio.volume = v;
+    // ricorda l'ultimo volume non-zero anche se cambiato trascinando la barra (non solo dal bottone muto)
+    if (v > 0) this.volumeBeforeMute = v;
     const volumeFill = document.getElementById("volume-fill");
     if (volumeFill) {
       volumeFill.style.width = `${v * 100}%`;
     }
+    const muteBtn = document.getElementById("btn-mute");
+    if (muteBtn) {
+      muteBtn.textContent = v === 0 ? "🔇" : v < 0.5 ? "🔉" : "🔊";
+    }
     localStorage.setItem(STORAGE_KEY_VOLUME, v.toString());
+  }
+
+  //silenzia il volume salvando il valore precedente, o lo ripristina se già muto
+  toggleMute() {
+    if (!this.audio) return;
+    if (this.audio.volume > 0) {
+      this.volumeBeforeMute = this.audio.volume;
+      this.setVolume(0);
+    } else {
+      this.setVolume(this.volumeBeforeMute || 0.5);
+    }
   }
 
   seek(percent) {
@@ -612,6 +677,7 @@ class Player {
 
   toggleShuffle() {
     this.isShuffle = !this.isShuffle;
+    localStorage.setItem(STORAGE_KEY_SHUFFLE, this.isShuffle.toString());
     const btn = document.getElementById("btn-shuffle");
     if (btn) btn.style.color = this.isShuffle ? "#1db954" : "";
     if (this.isShuffle) this.initShufflePool();
@@ -619,6 +685,7 @@ class Player {
 
   toggleRepeat() {
     this.isRepeat = !this.isRepeat;
+    localStorage.setItem(STORAGE_KEY_REPEAT, this.isRepeat.toString());
     if (this.audio) {
       this.audio.loop = this.isRepeat;
     }
@@ -814,6 +881,73 @@ const migrateOldPlaylist = () => {
   renderSidebarPlaylists();
 };
 
+// Menu a tendina "aggiungi a playlist" (.pl-menu, già stilizzato in app.css) — solo uno aperto alla volta
+let openPlMenu = null;
+const closePlMenu = () => {
+  if (!openPlMenu) return;
+  openPlMenu.remove();
+  openPlMenu = null;
+  document.removeEventListener("click", closePlMenu);
+  document.removeEventListener("scroll", closePlMenu, { capture: true });
+};
+
+const buildPlMenu = (track) => {
+  const menu = document.createElement("div");
+  menu.className = "pl-menu";
+  menu.addEventListener("click", (e) => e.stopPropagation()); // i click dentro il menu non lo richiudono
+
+  const header = document.createElement("p");
+  header.className = "pl-menu-header";
+  header.textContent = `Aggiungi "${track.title}" a:`;
+  menu.appendChild(header);
+
+  const playlists = getPlaylists();
+
+  if (playlists.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "pl-menu-empty";
+    empty.textContent = "Nessuna playlist ancora.";
+    menu.appendChild(empty);
+  } else {
+    playlists.forEach((pl) => {
+      const item = document.createElement("button");
+      item.className = "pl-menu-item";
+      item.textContent = pl.name;
+      item.addEventListener("click", () => {
+        toggleTrackInPlaylist(pl.id, track);
+        closePlMenu();
+      });
+      menu.appendChild(item);
+    });
+  }
+
+  // riga "crea nuova playlist": al click si trasforma in un campo di testo
+  const btnCreate = document.createElement("button");
+  btnCreate.className = "pl-menu-item pl-menu-create";
+  btnCreate.textContent = "+ Crea nuova playlist";
+  btnCreate.addEventListener("click", () => {
+    const input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = "Nome playlist";
+    input.className = "pl-menu-item";
+    input.style.outline = "none"; // niente anello blu di default sopra il menu scuro
+    btnCreate.replaceWith(input);
+    input.focus();
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && input.value.trim()) {
+        const newPlaylist = createPlaylist(input.value.trim());
+        toggleTrackInPlaylist(newPlaylist.id, track);
+        closePlMenu();
+      } else if (e.key === "Escape") {
+        closePlMenu();
+      }
+    });
+  });
+  menu.appendChild(btnCreate);
+
+  return menu;
+};
+
 // Bottone "+" per aggiungere un brano a una playlist — classe CSS passata come parametro
 const makeAddButton = (track, className) => {
   const btn = document.createElement("button");
@@ -822,27 +956,19 @@ const makeAddButton = (track, className) => {
   btn.textContent = "+";
   btn.addEventListener("click", (e) => {
     e.stopPropagation();
-    const playlists = getPlaylists();
-    let targetPlaylist;
-    if (playlists.length === 0) {
-      const name = prompt("Nessuna playlist. Dai un nome alla nuova:");
-      if (!name) return;
-      targetPlaylist = createPlaylist(name);
-    } else {
-      const names = playlists.map((p, i) => `${i + 1}. ${p.name}`).join("\n");
-      const choice = prompt(`Aggiungi "${track.title}" a:\n${names}\n\n0. Crea nuova playlist`);
-      if (choice === null) return;
-      if (choice === "0") {
-        const name = prompt("Nome della nuova playlist:");
-        if (!name) return;
-        targetPlaylist = createPlaylist(name);
-      } else {
-        const idx = parseInt(choice) - 1;
-        if (isNaN(idx) || idx < 0 || idx >= playlists.length) return;
-        targetPlaylist = playlists[idx];
-      }
-    }
-    toggleTrackInPlaylist(targetPlaylist.id, track);
+    closePlMenu();
+
+    const menu = buildPlMenu(track);
+    document.body.appendChild(menu);
+    const rect = btn.getBoundingClientRect();
+    menu.style.top = `${rect.bottom + window.scrollY + 4}px`;
+    menu.style.left = `${rect.left + window.scrollX}px`;
+
+    openPlMenu = menu;
+    document.addEventListener("click", closePlMenu, { once: true });
+    // la posizione è calcolata una sola volta all'apertura: se si scrolla, il menu
+    // si "scollegherebbe" dal bottone — più semplice chiuderlo allo scroll
+    document.addEventListener("scroll", closePlMenu, { capture: true, once: true });
   });
   return btn;
 };
@@ -967,14 +1093,14 @@ const renderSidebar = (activePage) => {
 /* ============================ 7. Inizializzazione ============================ */
 
 /*
-  initPage(activePage)
-  - Chiamata da home.js / search.js / album.js / artist.js
+  initPage()
+  - Chiamata da home.js / search.js / album.js / artist.js / playlist.js
   - Monta il player nel footer e lo restituisce per essere usato.
-  - renderSidebar() rimossa: la sidebar è ora statica in HTML su ogni pagina.
-    La classe "active" è hardcodata per pagina, i preferiti/playlist
-    vengono popolati via cloneNode da Simo/Cris direttamente sugli id HTML.
+  - In origine accettava un parametro activePage per la vecchia renderSidebar()
+    (sotto, commentata) che evidenziava il link attivo. Da quando la sidebar
+    e' statica in HTML, activePage non serviva piu' a nulla: rimosso.
 */
-const initPage = (activePage) => {
+const initPage = () => {
   const player = new Player();
   player.mount();
 
