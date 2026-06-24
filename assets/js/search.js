@@ -33,17 +33,17 @@ const gridArtists  = document.querySelector("#grid-artists");
 
 const renderTrackCard = (track) => {
   const card = document.createElement("div");
-  card.className = "card";
+  card.classList.add("card");
 
   const imageWrap = document.createElement("div");
-  imageWrap.className = "card-image-wrap";
+  imageWrap.classList.add("card-image-wrap");
   const img = document.createElement("img");
   img.src = bigArt(track.cover);
   img.alt = track.title;
   imageWrap.appendChild(img);
 
   const btnPlay = document.createElement("button");
-  btnPlay.className = "card-play";
+  btnPlay.classList.add("card-play");
   btnPlay.setAttribute("aria-label", "Play");
   btnPlay.textContent = "▶";
   btnPlay.addEventListener("click", (event) => {
@@ -53,7 +53,7 @@ const renderTrackCard = (track) => {
   imageWrap.appendChild(btnPlay);
 
   const btnFav = document.createElement("button");
-  btnFav.className = "card-fav";
+  btnFav.classList.add("card-fav");
   btnFav.classList.toggle("is-fav", isFavourite(track.id));
   btnFav.setAttribute("aria-label", "Preferito");
   btnFav.textContent = "♥";
@@ -64,11 +64,11 @@ const renderTrackCard = (track) => {
   });
 
   const title = document.createElement("p");
-  title.className = "card-title";
+  title.classList.add("card-title", "text-white");
   title.textContent = track.title;
 
   const sub = document.createElement("p");
-  sub.className = "card-sub";
+  sub.classList.add("card-sub");
   sub.textContent = track.artist;
 
   card.append(imageWrap, btnFav, title, sub);
@@ -79,21 +79,21 @@ const renderTrackCard = (track) => {
 
 const renderAlbumCard = (album) => {
   const card = document.createElement("div");
-  card.className = "card";
+  card.classList.add("card");
 
   const imageWrap = document.createElement("div");
-  imageWrap.className = "card-image-wrap";
+  imageWrap.classList.add("card-image-wrap");
   const img = document.createElement("img");
   img.src = album.cover;
   img.alt = album.title;
   imageWrap.appendChild(img);
 
   const title = document.createElement("p");
-  title.className = "card-title";
+  title.classList.add("card-title", "text-white");
   title.textContent = album.title;
 
   const sub = document.createElement("p");
-  sub.className = "card-sub";
+  sub.classList.add("card-sub");
   sub.textContent = album.artist;
 
   card.append(imageWrap, title, sub);
@@ -106,21 +106,21 @@ const renderAlbumCard = (album) => {
 
 const renderArtistCard = (artist) => {
   const card = document.createElement("div");
-  card.className = "card";
+  card.classList.add("card");
 
   const imageWrap = document.createElement("div");
-  imageWrap.className = "card-image-wrap round";
+  imageWrap.classList.add("card-image-wrap", "round");
   imageWrap.style.display = "grid";
   imageWrap.style.placeItems = "center";
   imageWrap.style.fontSize = "32px";
   imageWrap.textContent = "🎤";
 
   const title = document.createElement("p");
-  title.className = "card-title";
+  title.classList.add("card-title", "text-white");
   title.textContent = artist.name;
 
   const sub = document.createElement("p");
-  sub.className = "card-sub";
+  sub.classList.add("card-sub");
   sub.textContent = artist.genre || "Artista";
 
   card.append(imageWrap, title, sub);
@@ -137,7 +137,7 @@ const showRow = (section, grid, items, renderCard) => {
 };
 
 const doSearch = async (term) => {
-  if (!term) {
+  if (!term || term.length < 1) {
     showRow(rowTracks, gridTracks, [], renderTrackCard);
     showRow(rowAlbums, gridAlbums, [], renderAlbumCard);
     showRow(rowArtists, gridArtists, [], renderArtistCard);
