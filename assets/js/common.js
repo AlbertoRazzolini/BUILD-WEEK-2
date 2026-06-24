@@ -61,10 +61,10 @@
 const API_BASE = "https://itunes.apple.com";
 const STORAGE_KEY_HISTORY = "epitunes_history";
 const STORAGE_KEY_FAVOURITES = "epitunes_favourites";
-const STORAGE_KEY_PLAYLIST = "epitunes_playlist"; // la mia vecchia chiave (la tengo solo per la migrazione)
-const STORAGE_KEY_PLAYLISTS = "epitunes_playlists"; // qui salvo tutte le playlist che creo
+const STORAGE_KEY_PLAYLIST = "epitunes_playlist"; // singola playlist (migrazione) — Lucio legge questa chiave per i container playlist
+const STORAGE_KEY_PLAYLISTS = "epitunes_playlists"; // playlist multiple con nome — struttura: [{id, name, tracks}]
 const STORAGE_KEY_LAST_SEARCH = "epitunes_last_search";
-const STORAGE_KEY_PLAYLIST = "epitunes_playlist"; // brani aggiunti manualmente dall'utente (Lucio legge questa chiave per i container playlist)
+const STORAGE_KEY_VOLUME = "epitunes_volume"; // volume salvato tra sessioni (Cris)
 const MAX_HISTORY = 12;
 
 /* ============================ 2. Helpers ============================ */
@@ -747,6 +747,99 @@ const togglePlaylist = (track) => {
   localStorage.setItem(STORAGE_KEY_PLAYLIST, JSON.stringify(playlist));
 };
 
+/* ============================ 5.5 Playlist multiple ============================ */
+
+// ID speciale che identifica la sezione "Brani che ti piacciono" (i preferiti come playlist)
+const PLAYLIST_FAVOURITES = "favourites";
+
+// Restituisce tutte le playlist salvate: [{id, name, tracks}]
+const getPlaylists = () => {
+  const data = localStorage.getItem(STORAGE_KEY_PLAYLISTS);
+  return data ? JSON.parse(data) : [];
+};
+
+const getPlaylistById = (id) => {
+  return getPlaylists().find((p) => p.id === id) || null;
+};
+
+const deletePlaylist = (id) => {
+  const updated = getPlaylists().filter((p) => p.id !== id);
+  localStorage.setItem(STORAGE_KEY_PLAYLISTS, JSON.stringify(updated));
+  renderSidebarPlaylists();
+};
+
+// Aggiunge o rimuove un brano da una playlist specifica
+const toggleTrackInPlaylist = (playlistId, track) => {
+  const playlists = getPlaylists();
+  const pl = playlists.find((p) => p.id === playlistId);
+  if (!pl) return;
+  const exists = pl.tracks.some((t) => t.id === track.id);
+  if (exists) {
+    pl.tracks = pl.tracks.filter((t) => t.id !== track.id);
+  } else {
+    pl.tracks.unshift(track);
+  }
+  localStorage.setItem(STORAGE_KEY_PLAYLISTS, JSON.stringify(playlists));
+  renderSidebarPlaylists();
+};
+
+// Crea una nuova playlist vuota con ID univoco basato sul timestamp
+const createPlaylist = (name) => {
+  const playlists = getPlaylists();
+  const newPlaylist = { id: `pl_${Date.now()}`, name, tracks: [] };
+  playlists.push(newPlaylist);
+  localStorage.setItem(STORAGE_KEY_PLAYLISTS, JSON.stringify(playlists));
+  renderSidebarPlaylists();
+  return newPlaylist;
+};
+
+// Migra i brani della vecchia chiave singola alle playlist multiple (eseguita una sola volta)
+const migrateOldPlaylist = () => {
+  const old = localStorage.getItem(STORAGE_KEY_PLAYLIST);
+  if (!old) return;
+  const tracks = JSON.parse(old);
+  if (!Array.isArray(tracks) || tracks.length === 0) return;
+  const existing = getPlaylists();
+  if (existing.some((p) => p.id === "migrated")) return;
+  existing.push({ id: "migrated", name: "La tua playlist", tracks });
+  localStorage.setItem(STORAGE_KEY_PLAYLISTS, JSON.stringify(existing));
+  localStorage.removeItem(STORAGE_KEY_PLAYLIST);
+  renderSidebarPlaylists();
+};
+
+// Bottone "+" per aggiungere un brano a una playlist — classe CSS passata come parametro
+const makeAddButton = (track, className) => {
+  const btn = document.createElement("button");
+  btn.className = className;
+  btn.setAttribute("aria-label", "Aggiungi a playlist");
+  btn.textContent = "+";
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const playlists = getPlaylists();
+    let targetPlaylist;
+    if (playlists.length === 0) {
+      const name = prompt("Nessuna playlist. Dai un nome alla nuova:");
+      if (!name) return;
+      targetPlaylist = createPlaylist(name);
+    } else {
+      const names = playlists.map((p, i) => `${i + 1}. ${p.name}`).join("\n");
+      const choice = prompt(`Aggiungi "${track.title}" a:\n${names}\n\n0. Crea nuova playlist`);
+      if (choice === null) return;
+      if (choice === "0") {
+        const name = prompt("Nome della nuova playlist:");
+        if (!name) return;
+        targetPlaylist = createPlaylist(name);
+      } else {
+        const idx = parseInt(choice) - 1;
+        if (isNaN(idx) || idx < 0 || idx >= playlists.length) return;
+        targetPlaylist = playlists[idx];
+      }
+    }
+    toggleTrackInPlaylist(targetPlaylist.id, track);
+  });
+  return btn;
+};
+
 /* ============================ 6. Render sidebar ============================ */
 
 /*
@@ -792,6 +885,52 @@ const renderSidebarFavourites = () => {
         ? favourites.map(buildFavItem)
         : [buildEmptyItem()]),
     );
+  });
+};
+
+// Popola #sidebar-playlists-list e #mobile-playlists-list con le playlist dell'utente
+const renderSidebarPlaylists = () => {
+  const tmplPlaylist = document.getElementById("tmpl-playlist-item");
+  const lists = document.querySelectorAll(
+    "#sidebar-playlists-list, #mobile-playlists-list",
+  );
+  if (!tmplPlaylist || lists.length === 0) return;
+
+  const playlists = getPlaylists();
+
+  const buildEmptyItem = () => {
+    const li = document.createElement("li");
+    const span = document.createElement("span");
+    span.className = "dropdown-item text-secondary";
+    span.textContent = "Nessuna playlist";
+    li.appendChild(span);
+    return li;
+  };
+
+  // voce speciale "Brani che ti piacciono" — punta ai preferiti come playlist
+  const buildFavouritesItem = () => {
+    const item = tmplPlaylist.content.firstElementChild.cloneNode(true);
+    item.querySelector(".playlist-name").textContent = "Brani che ti piacciono";
+    item.style.cursor = "pointer";
+    item.addEventListener("click", () => {
+      window.location.href = `playlist.html?id=${PLAYLIST_FAVOURITES}`;
+    });
+    return item;
+  };
+
+  const buildPlaylistItem = (playlist) => {
+    const item = tmplPlaylist.content.firstElementChild.cloneNode(true);
+    item.querySelector(".playlist-name").textContent = playlist.name;
+    item.style.cursor = "pointer";
+    item.addEventListener("click", () => {
+      window.location.href = `playlist.html?id=${playlist.id}`;
+    });
+    return item;
+  };
+
+  lists.forEach((list) => {
+    const items = [buildFavouritesItem(), ...playlists.map(buildPlaylistItem)];
+    list.replaceChildren(...(playlists.length > 0 ? items : [buildFavouritesItem(), buildEmptyItem()]));
   });
 };
 
