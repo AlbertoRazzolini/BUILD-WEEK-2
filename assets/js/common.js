@@ -128,30 +128,145 @@ const debounce = (fn, ms) => {
 /* ============================ 2.5 Funzioni ========================== */
 
 
+// qui gestisco i miei badge filtro: invece di cercare su iTunes,
+// faccio vedere i miei preferiti salvati divisi per tipo.
+// siccome salvo sempre brani, ricavo album e artisti da quelli.
+// li ho fatti funzionare come su Spotify: ricliccando lo stesso
+// filtro torno alla normalità, e ne tengo attivo solo uno alla volta.
+let filtroActivo = null;
+
 const myFunction = () => {
   const myButtons = document.querySelectorAll(".badge.bg-secondary");
+  if (myButtons.length === 0) return;
 
-  if (myButtons.length > 0) {
-    myButtons.forEach((singleButton) => {
-      singleButton.addEventListener("click", (event) => {
-        const filtro = event.target.dataset.filter;
+  const contenedor = document.getElementById("sidebar-filter-results");
 
-        if (filtro === "artisti") {
-          alert("Cercando artisti...");
-      
-        } else if (filtro === "album") {
-          alert("Caricando albums...");
-         
-        } else if (filtro === "generi") { 
-          alert("Mostrando generi musicali...");
-          
-        }
-      });
+  // mi svuota la lista e spegne il verde da tutti i badge
+  const resetFiltros = () => {
+    filtroActivo = null;
+    if (contenedor) contenedor.replaceChildren();
+    myButtons.forEach((b) => {
+      b.classList.remove("bg-success");
+      b.classList.add("bg-secondary");
     });
-  }
+  };
+
+  myButtons.forEach((singleButton) => {
+    singleButton.addEventListener("click", (event) => {
+      const filtro = event.currentTarget.dataset.filter;
+
+      // se riclicco il filtro che ho già attivo, lo spengo e torno normale
+      if (filtroActivo === filtro) {
+        resetFiltros();
+        return;
+      }
+
+      // accendo questo filtro e spengo gli altri, poi lo coloro di verde
+      resetFiltros();
+      filtroActivo = filtro;
+      event.currentTarget.classList.remove("bg-secondary");
+      event.currentTarget.classList.add("bg-success");
+
+      const favourites = getFavourites();
+
+      if (filtro === "artisti") {
+        // tengo un artista solo per ogni artistId così non li ripeto
+        const mapaArtistas = new Map();
+        favourites.forEach((track) => {
+          if (!mapaArtistas.has(track.artistId)) {
+            mapaArtistas.set(track.artistId, {
+              id: track.artistId,
+              title: track.artist,
+            });
+          }
+        });
+        renderResultados([...mapaArtistas.values()], "artisti");
+
+      } else if (filtro === "album") {
+        // stessa cosa per gli album: uno solo per ogni albumId
+        const mapaAlbums = new Map();
+        favourites.forEach((track) => {
+          if (!mapaAlbums.has(track.albumId)) {
+            mapaAlbums.set(track.albumId, {
+              id: track.albumId,
+              title: track.album,
+              artist: track.artist,
+              cover: track.cover,
+            });
+          }
+        });
+        renderResultados([...mapaAlbums.values()], "album");
+
+      } else if (filtro === "generi") {
+        // raggruppo per genere: un genere solo anche se ho più brani uguali
+        const mapaGeneros = new Map();
+        favourites.forEach((track) => {
+          const genero = track.genre || "Sconosciuto";
+          if (!mapaGeneros.has(genero)) {
+            mapaGeneros.set(genero, { id: genero, title: genero });
+          }
+        });
+        renderResultados([...mapaGeneros.values()], "generi");
+      }
+    });
+  });
 };
 
-myFunction();
+// questa la uso per disegnare i risultati dentro #sidebar-filter-results.
+// clono il <template> giusto in base al tipo, come faccio già per i preferiti.
+const renderResultados = (lista, tipo) => {
+  const contenedor = document.getElementById("sidebar-filter-results");
+  if (!contenedor) return;
+
+  // scelgo il template a seconda di cosa devo mostrare
+  let tmpl = null;
+  if (tipo === "album") {
+    tmpl = document.getElementById("tmpl-album-item");
+  } else if (tipo === "artisti") {
+    tmpl = document.getElementById("tmpl-artist-item");
+  } else if (tipo === "generi") {
+    tmpl = document.getElementById("tmpl-filter-result");
+  }
+  if (!tmpl) return;
+   //skibidi
+  // per ogni elemento clono il template e ci metto dentro i suoi dati
+  const buildItem = (elemento) => {
+    const item = tmpl.content.firstElementChild.cloneNode(true);
+
+    if (tipo === "album") {
+      const img = item.querySelector(".album-cover");
+      if (img) {
+        img.src = elemento.cover || "https://placehold.co/40x40";
+        img.alt = elemento.title;
+      }
+      item.querySelector(".album-title").textContent = elemento.title;
+      item.querySelector(".album-artist").textContent = elemento.artist;
+      // cliccando l'album mi porto sulla pagina dell'album
+      item.addEventListener("click", () => {
+        window.location.href = `album.html?id=${elemento.id}`;
+      });
+    } else if (tipo === "artisti") {
+      const img = item.querySelector(".artist-cover");
+      if (img) img.alt = elemento.title;
+      item.querySelector(".artist-name").textContent = elemento.title;
+      // cliccando l'artista vado sulla sua pagina
+      item.addEventListener("click", () => {
+        window.location.href = `artist.html?id=${elemento.id}`;
+      });
+    } else if (tipo === "generi") {
+      // qui elemento è un genere, quindi mostro solo il suo nome
+      const ico = item.querySelector(".ico");
+      if (ico) ico.textContent = "🎵";
+      item.querySelector(".filter-label").textContent = elemento.title;
+    }
+
+    return item;
+  };
+
+  // svuoto e rimetto dentro tutti i nuovi elementi
+  contenedor.replaceChildren(...lista.map(buildItem));
+};
+
 /* ============================ 3. Classi modello ============================ */
 
 /*
@@ -173,6 +288,7 @@ class Track {
     this.cover = raw.artworkUrl100;//link immagine copertina
     this.previewUrl = raw.previewUrl;//link streaming di 30 secondi
     this.durationMs = raw.trackTimeMillis;//durata in millisecondi
+    this.genre = raw.primaryGenreName;//genere del brano (mi serve per il filtro Generi)
   }
 }
 
@@ -307,8 +423,127 @@ class Player {
     const controls = document.createElement("div");
     controls.className = "player-controls";
     controls.append(btnShuffle, btnPrev, btnToggle, btnNext, btnRepeat);
+
+    const timeCurrent = document.createElement("span");
+    timeCurrent.id = "time-current";
+    timeCurrent.textContent = "0:00";
+
+    const progressFill = document.createElement("div");
+    progressFill.className = "progress-fill";
+    progressFill.id = "progress-fill";
+
+    const progressBar = document.createElement("div");
+    progressBar.className = "progress-bar";
+    progressBar.id = "progress-bar";
+    progressBar.appendChild(progressFill);
+
+    const timeTotal = document.createElement("span");
+    timeTotal.id = "time-total";
+    timeTotal.textContent = "0:00";
+
+    const progress = document.createElement("div");
+    progress.className = "player-progress";
+    progress.append(timeCurrent, progressBar, timeTotal);
+
+    const center = document.createElement("div");
+    center.className = "player-center";
+    center.append(controls, progress);
+
+    const volumeIcon = document.createElement("span");
+    volumeIcon.textContent = "🔊";
+
+    const volumeFill = document.createElement("div");
+    volumeFill.className = "volume-fill";
+    volumeFill.id = "volume-fill";
+    volumeFill.style.width = "80%";
+
+    const volumeBar = document.createElement("div");
+    volumeBar.className = "volume-bar";
+    volumeBar.id = "volume-bar";
+    volumeBar.appendChild(volumeFill);
+
+    const right = document.createElement("div");
+    right.className = "player-right";
+    right.append(volumeIcon, volumeBar);
+
+    footer.replaceChildren(track, center, right);
+
+    if (this.audio) {//volume di defalut all 80 %
+      this.audio.volume = 0.8;
+    }
+
+    btnToggle.addEventListener("click", () => this.togglePlay());//dai un listener al bottone play /pause
+
+    progressBar.addEventListener("click", (e) => {//listener per il click della barra del progresso della canzone
+      if (!this.currentTrack || !this.audio.duration) return;
+      const rect = progressBar.getBoundingClientRect();//dammi le coordinate della barra
+      const clickX = e.clientX - rect.left;//calcola dove ho toccato esattamente
+      const width = rect.width;//larghezza totale barra
+      const percent = clickX / width;//trasforma il click in percentuale
+      this.seek(percent);//sposta la riproduzione a quella percentuale
+    });
+
+    volumeBar.addEventListener("click", (e) => {//listener della barra del volume
+      const rect = volumeBar.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const width = rect.width;//sempre tra 0 e 1 massimo
+      const percent = Math.max(0, Math.min(1, clickX / width));
+      this.setVolume(percent);//applica il nuovo volume
+    });
   }
-};
+//ricevi il tarck di Apple e riproducilo
+  play(track) {
+    if (!track || !track.previewUrl) return;
+    this.currentTrack = track;
+    this.audio.src = track.previewUrl;
+    this.audio.play();
+    this.isPlaying = true;
+//aggiorna tutta linterfaccia del footer con i nuovi dati del API della canzone da ascoltare
+    const coverImg = document.getElementById("player-cover-img");
+    const titleEl = document.getElementById("player-title");
+    const artistEl = document.getElementById("player-artist");
+    const totalEl = document.getElementById("time-total");
+    const btnToggle = document.getElementById("btn-toggle");
+
+    if (coverImg) coverImg.src = track.cover;
+    if (titleEl) titleEl.textContent = track.title;
+    if (artistEl) artistEl.textContent = track.artist;
+    if (totalEl) totalEl.textContent = formatTime(track.durationMs);
+    if (btnToggle) btnToggle.textContent = "⏸";
+
+    if (typeof addToHistory === "function") {
+      addToHistory(track);
+    }
+  }
+//comportamento del toggle delbottone play /pause
+  togglePlay() {
+    if (!this.currentTrack) return;
+    const btnToggle = document.getElementById("btn-toggle");
+    if (this.isPlaying) {
+      this.audio.pause();
+      this.isPlaying = false;
+      if (btnToggle) btnToggle.textContent = "▶";
+    } else {
+      this.audio.play();
+      this.isPlaying = true;
+      if (btnToggle) btnToggle.textContent = "⏸";
+    }
+  }
+//regola volume sempre tran 0 e 1
+  setVolume(v) {
+    if (!this.audio) return;
+    this.audio.volume = v;
+    const volumeFill = document.getElementById("volume-fill");
+    if (volumeFill) {
+      volumeFill.style.width = `${v * 100}%`;
+    }
+  }
+
+  seek(percent) {
+    if (!this.audio || !this.audio.duration) return;
+    this.audio.currentTime = percent * this.audio.duration;
+  }
+}
 
 /* ============================ 5. localStorage helpers ============================ */
 
@@ -450,6 +685,9 @@ const initPage = (activePage) => {
   window.player = player;
 
   renderSidebarFavourites();
+
+  // attivo i miei badge filtro (altrimenti i bottoni non fanno niente)
+  myFunction();
 
   return player;
 };
