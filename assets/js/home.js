@@ -122,7 +122,7 @@ const ROW_IDS = {
 };
 const tmplCard = document.getElementById("tmpl-card");
 
-const buildCard = (track) => {
+/* const buildCard = (track) => {
   const card = tmplCard.content.firstElementChild.cloneNode(true);
 
   const img = card.querySelector("img");
@@ -155,6 +155,37 @@ const buildCard = (track) => {
   card.addEventListener("click", () => window.player.play(track));
 
   return card;
+}; 
+*/
+
+// CARD DEI CONSIGLIATI PER POTER SENTIRE PIU' TRACCE SUI CONSIGLIA (Marco)
+
+const buildCard = (track, currentTracklist = []) => { // <-- MODIFICA: Accetta l'array della riga
+  const card = tmplCard.content.firstElementChild.cloneNode(true);
+
+  const img = card.querySelector("img");
+  img.src = track.cover;
+  img.alt = track.title;
+
+  card.querySelector(".card-title").textContent = track.title;
+  card.querySelector(".card-sub").textContent = track.artist;
+
+  const btnFav = card.querySelector(".card-fav");
+  btnFav.classList.toggle("is-fav", isFavourite(track.id));
+  btnFav.addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleFavourite(track);
+    btnFav.classList.toggle("is-fav", isFavourite(track.id));
+  });
+
+  card.querySelector(".card-play").addEventListener("click", (event) => {
+    event.stopPropagation();
+    window.player.play(track, currentTracklist); // <-- MODIFICA: Passa la riga al player
+  });
+
+  card.addEventListener("click", () => window.player.play(track, currentTracklist)); // <-- MODIFICA: Passa la riga al player
+
+  return card;
 };
 
 const renderRow = (rowTitle, tracks) => {
@@ -182,7 +213,10 @@ const renderRow = (rowTitle, tracks) => {
     container = list;
   }
 
-  container.replaceChildren(...tracks.map(buildCard));
+  // container.replaceChildren(...tracks.map(buildCard));
+
+  // MODIFICA: Passa esplicitamente sia la traccia singola sia l'intero array 'tracks' della riga
+  container.replaceChildren(...tracks.map(track => buildCard(track, tracks)));
 };
 // appena digiti almeno 3 lettere, salva il termine e vai alla pagina di ricerca dedicata
 const goToSearch = (term) => {
