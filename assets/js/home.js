@@ -45,7 +45,7 @@ const fetchTracksByTerm = async (term) => {
       title: track.trackName,
       artist: track.artistName,
       cover: track.artworkUrl100,
-      audioUrl: track.previewUrl,
+      previewUrl: track.previewUrl,
       albumId: track.collectionId,
     }));
     console.log(`Dati ricevuti per "${term}":`, tracks);
