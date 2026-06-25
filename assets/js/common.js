@@ -1064,11 +1064,7 @@ const renderSidebarPlaylists = () => {
 
   lists.forEach((list) => {
     const items = [buildFavouritesItem(), ...playlists.map(buildPlaylistItem)];
-    list.replaceChildren(
-      ...(playlists.length > 0
-        ? items
-        : [buildFavouritesItem(), buildEmptyItem()]),
-    );
+    list.replaceChildren(...items);
   });
 };
 
