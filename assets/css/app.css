@@ -72,6 +72,7 @@ button {
     "main"
     "player";
   height: 100vh;
+  height: 100dvh; /* dvh = dynamic viewport height: esclude la navigation bar mobile */
 }
 
 .sidebar {
@@ -345,7 +346,7 @@ button {
 .card-fav {
   position: absolute;
   top: 8px;
-  right: 8px;
+  left: 48px; /* affiancato al card-add (left: 8px, width: 32px → 8+32+8 = 48) */
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -625,6 +626,7 @@ button {
   min-width: 0;
 }
 .player-title {
+  display: block; /* <a> è inline di default — block lo mette su riga propria */
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
@@ -633,6 +635,7 @@ button {
   margin: 0;
 }
 .player-artist {
+  display: block;
   font-size: 11px;
   color: var(--text-secondary);
   white-space: nowrap;

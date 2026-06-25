@@ -950,7 +950,9 @@ const makeAddButton = (track, className) => {
   const btn = document.createElement("button");
   btn.className = className;
   btn.setAttribute("aria-label", "Aggiungi a playlist");
-  btn.textContent = "+";
+  const icon = document.createElement("ion-icon");
+  icon.setAttribute("name", "add-outline");
+  btn.appendChild(icon);
   btn.addEventListener("click", (e) => {
     e.stopPropagation();
     closePlMenu();
