@@ -814,6 +814,21 @@ button {
 
 /* Default (sotto i 576px): sidebar nascosta del tutto, si usa l'hamburger/offcanvas mobile */
 
+/* Sotto 576px: topbar compatta — home e hamburger equidistanti, search flessibile */
+@media (max-width: 575px) {
+  .topbar {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .topbar > div {
+    flex: 1;
+    min-width: 0;
+  }
+  .search-input {
+    min-width: 0;
+  }
+}
+
 /* Da 576px: sidebar compatta a icone, niente testo (il "menu" pieno appare da 768px in su) */
 @media (min-width: 576px) {
   .app {
