@@ -175,10 +175,9 @@ const myFunction = () => {
       b.classList.remove("bg-success");
       b.classList.add("bg-secondary");
     });
-    // ripristina card e sezioni nascoste dal filtro generi
-    document
-      .querySelectorAll(".card[data-genre]")
-      .forEach((c) => (c.style.display = ""));
+    // ripristina card, sezioni e preferiti sidebar nascosti dal filtro generi
+    document.querySelectorAll(".card[data-genre]").forEach((c) => (c.style.display = ""));
+    document.querySelectorAll("#sidebar-favs-list [data-genre], #mobile-favs-list [data-genre]").forEach((item) => item.classList.remove("genre-hidden"));
     [
       "row-history",
       "row-favourites",
@@ -301,12 +300,14 @@ const renderResultados = (lista, tipo) => {
           .querySelectorAll(".sidebar-filter-item")
           .forEach((el) => el.classList.remove("active-genre"));
         item.classList.add("active-genre");
-        // filtra le card della home che hanno data-genre corrispondente
+        // filtra le card della home e i preferiti in sidebar per genere
         const genreLower = elemento.title.toLowerCase();
         document.querySelectorAll(".card[data-genre]").forEach((card) => {
-          card.style.display = card.dataset.genre.includes(genreLower)
-            ? ""
-            : "none";
+          card.style.display = card.dataset.genre.includes(genreLower) ? "" : "none";
+        });
+        document.querySelectorAll("#sidebar-favs-list [data-genre], #mobile-favs-list [data-genre]").forEach((item) => {
+          const g = item.dataset.genre;
+          item.classList.toggle("genre-hidden", !!(g && !g.includes(genreLower)));
         });
         // nasconde le sezioni della home che non hanno più card visibili
         [
@@ -1068,6 +1069,7 @@ const renderSidebarFavourites = () => {
   const buildFavItem = (track) => {
     const item = tmplFav.content.firstElementChild.cloneNode(true);
     item.classList.add("cursor-pointer");
+    item.dataset.genre = (track.genre || "").toLowerCase(); // usato dal filtro generi
     const img = item.querySelector(".fav-cover");
     img.src = track.cover;
     img.alt = track.title;
