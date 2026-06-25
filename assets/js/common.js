@@ -497,13 +497,23 @@ class Player {
 
     footer.replaceChildren(track, center, right);
 
-    if (this.audio) {
-      const savedVolume = parseFloat(localStorage.getItem(STORAGE_KEY_VOLUME));
-      const initialVolume = Number.isNaN(savedVolume)
-        ? 0.5
-        : Math.max(0, Math.min(1, savedVolume));
-      this.setVolume(initialVolume);
-    }
+    // sotto i 576px la barra del volume è nascosta (vedi app.css): il volume
+    // dell'elemento audio resta al massimo e il controllo passa ai tasti fisici
+    const mobileVolumeQuery = window.matchMedia("(max-width: 575.98px)");
+    const applyVolumeForViewport = () => {
+      if (!this.audio) return;
+      if (mobileVolumeQuery.matches) {
+        this.audio.volume = 1;
+      } else {
+        const savedVolume = parseFloat(localStorage.getItem(STORAGE_KEY_VOLUME));
+        const initialVolume = Number.isNaN(savedVolume)
+          ? 0.5
+          : Math.max(0, Math.min(1, savedVolume));
+        this.setVolume(initialVolume);
+      }
+    };
+    applyVolumeForViewport();
+    mobileVolumeQuery.addEventListener("change", applyVolumeForViewport);
 
     btnToggle.addEventListener("click", () => this.togglePlay()); //dai un listener al bottone play /pause
 

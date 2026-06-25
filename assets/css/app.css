@@ -703,7 +703,7 @@ button {
 }
 
 .player-right {
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
@@ -790,6 +790,12 @@ button {
   #sidebar-favs-list,
   #sidebar-playlists-list {
     padding: 0 !important;
+  }
+
+  /* da qui in su lo schermo è abbastanza largo da mostrare la barra del volume;
+     sotto, il volume è gestito dai tasti fisici del dispositivo */
+  .player-right {
+    display: flex;
   }
 }
 
