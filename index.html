@@ -188,13 +188,14 @@
           <div class="card">
             <div class="card-image-wrap">
               <img src="" alt="cover" />
+              <!-- card-add viene appendato qui da JS (makeAddButton): top-left -->
+              <button class="card-fav" aria-label="Aggiungi ai preferiti">
+                <ion-icon name="heart-outline"></ion-icon>
+              </button>
               <button class="card-play" aria-label="Play">
                 <ion-icon name="play-outline"></ion-icon>
               </button>
             </div>
-            <button class="card-fav" aria-label="Aggiungi ai preferiti">
-              <ion-icon name="heart-outline"></ion-icon>
-            </button>
             <p class="card-title text-white"></p>
             <!-- <a> (non <p>) — JS imposta .href per linkare artista o album -->
             <a class="card-sub"></a>
