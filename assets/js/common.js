@@ -647,6 +647,9 @@ class Player {
       addToHistory(track);
     }
 
+    const footer = document.querySelector(".player");
+    if (footer) footer.classList.add("has-track");
+
     this.updateNowPlayingUI();
   }
   //comportamento del toggle delbottone play /pause
