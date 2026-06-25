@@ -244,7 +244,7 @@ const myFunction = () => {
 
 // questa la uso per disegnare i risultati dentro #sidebar-filter-results.
 // clono il <template> giusto in base al tipo, come faccio già per i preferiti.
-const renderResultati = (lista, tipo) => {
+const renderResultados = (lista, tipo) => {
   const contenedor = document.getElementById("sidebar-filter-results");
   if (!contenedor) return;
 
