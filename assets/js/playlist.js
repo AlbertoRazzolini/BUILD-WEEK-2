@@ -131,7 +131,9 @@ const renderTracklist = (tracks, playlistId, isFavourites, render) => {
     btnFav.className = "track-fav";
     btnFav.classList.toggle("is-fav", isFavourite(track.id));
     btnFav.setAttribute("aria-label", "Preferito");
-    btnFav.textContent = "♥";
+    const heartIcon = document.createElement("ion-icon");
+    heartIcon.setAttribute("name", isFavourite(track.id) ? "heart" : "heart-outline");
+    btnFav.appendChild(heartIcon);
     btnFav.addEventListener("click", (event) => {
       event.stopPropagation();
       toggleFavourite(track);

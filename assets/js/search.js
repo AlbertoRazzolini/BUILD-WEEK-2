@@ -49,15 +49,18 @@ const renderTrackCard = (track, tracklist = []) => {
   // card-fav (cuore) in alto a destra dentro imageWrap — coerente con le card della home
   const btnFav = document.createElement("button");
   btnFav.classList.add("card-fav");
-  btnFav.classList.toggle("is-fav", isFavourite(track.id));
+  const initFav = isFavourite(track.id);
+  btnFav.classList.toggle("is-fav", initFav);
   btnFav.setAttribute("aria-label", "Preferito");
-  const favIcon = document.createElement("ion-icon");
-  favIcon.setAttribute("name", "heart-outline");
-  btnFav.appendChild(favIcon);
+  const heartIcon = document.createElement("ion-icon");
+  heartIcon.setAttribute("name", initFav ? "heart" : "heart-outline");
+  btnFav.appendChild(heartIcon);
   btnFav.addEventListener("click", (event) => {
     event.stopPropagation();
     toggleFavourite(track);
-    btnFav.classList.toggle("is-fav", isFavourite(track.id));
+    const nowFav = isFavourite(track.id);
+    btnFav.classList.toggle("is-fav", nowFav);
+    heartIcon.setAttribute("name", nowFav ? "heart" : "heart-outline");
   });
   imageWrap.appendChild(btnFav);
 
