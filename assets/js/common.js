@@ -134,6 +134,31 @@ const debounce = (fn, ms) => {
 // li ho fatti funzionare come su Spotify: ricliccando lo stesso
 // filtro torno alla normalità, e ne tengo attivo solo uno alla volta.
 let filtroActivo = null;
+let filtroGeneroActivo = null; // genere selezionato nella lista — persiste tra re-render
+
+// costruisce e renderizza la lista dei generi dai preferiti attuali
+const renderGenreFilter = () => {
+  const mapaGeneros = new Map();
+  getFavourites().forEach((track) => {
+    const genero = track.genre || "Sconosciuto";
+    if (!mapaGeneros.has(genero)) {
+      mapaGeneros.set(genero, { id: genero, title: genero });
+    }
+  });
+  renderResultados([...mapaGeneros.values()], "generi");
+
+  // riapplica l'evidenziazione del genere attivo dopo il re-render
+  if (filtroGeneroActivo) {
+    const contenedor = document.getElementById("sidebar-filter-results");
+    if (contenedor) {
+      contenedor.querySelectorAll(".sidebar-filter-item").forEach((el) => {
+        if (el.querySelector(".filter-label")?.textContent === filtroGeneroActivo) {
+          el.classList.add("active-genre");
+        }
+      });
+    }
+  }
+};
 
 const myFunction = () => {
   const myButtons = document.querySelectorAll(".badge.bg-secondary");
@@ -144,14 +169,23 @@ const myFunction = () => {
   // mi svuota la lista e spegne il verde da tutti i badge
   const resetFiltros = () => {
     filtroActivo = null;
+    filtroGeneroActivo = null;
     if (contenedor) contenedor.replaceChildren();
     myButtons.forEach((b) => {
       b.classList.remove("bg-success");
       b.classList.add("bg-secondary");
     });
     // ripristina card e sezioni nascoste dal filtro generi
-    document.querySelectorAll(".card[data-genre]").forEach(c => (c.style.display = ""));
-    ["row-history", "row-favourites", "row-pop", "row-rock", "row-hits"].forEach(id => {
+    document
+      .querySelectorAll(".card[data-genre]")
+      .forEach((c) => (c.style.display = ""));
+    [
+      "row-history",
+      "row-favourites",
+      "row-pop",
+      "row-rock",
+      "row-hits",
+    ].forEach((id) => {
       const section = document.getElementById(id);
       if (section) section.style.display = "";
     });
@@ -203,15 +237,7 @@ const myFunction = () => {
         });
         renderResultados([...mapaAlbums.values()], "album");
       } else if (filtro === "generi") {
-        // raggruppo per genere: un genere solo anche se ho più brani uguali
-        const mapaGeneros = new Map();
-        favourites.forEach((track) => {
-          const genero = track.genre || "Sconosciuto";
-          if (!mapaGeneros.has(genero)) {
-            mapaGeneros.set(genero, { id: genero, title: genero });
-          }
-        });
-        renderResultados([...mapaGeneros.values()], "generi");
+        renderGenreFilter();
       }
     });
   });
@@ -269,19 +295,32 @@ const renderResultados = (lista, tipo) => {
       item.querySelector(".filter-label").textContent = elemento.title;
       item.style.cursor = "pointer";
       item.addEventListener("click", () => {
-        // evidenzia il genere attivo, toglie l'attivo dagli altri
-        contenedor.querySelectorAll(".sidebar-filter-item").forEach(el => el.classList.remove("active-genre"));
+        // salva e evidenzia il genere attivo, toglie l'attivo dagli altri
+        filtroGeneroActivo = elemento.title;
+        contenedor
+          .querySelectorAll(".sidebar-filter-item")
+          .forEach((el) => el.classList.remove("active-genre"));
         item.classList.add("active-genre");
         // filtra le card della home che hanno data-genre corrispondente
         const genreLower = elemento.title.toLowerCase();
-        document.querySelectorAll(".card[data-genre]").forEach(card => {
-          card.style.display = card.dataset.genre.includes(genreLower) ? "" : "none";
+        document.querySelectorAll(".card[data-genre]").forEach((card) => {
+          card.style.display = card.dataset.genre.includes(genreLower)
+            ? ""
+            : "none";
         });
         // nasconde le sezioni della home che non hanno più card visibili
-        ["row-history", "row-favourites", "row-pop", "row-rock", "row-hits"].forEach(id => {
+        [
+          "row-history",
+          "row-favourites",
+          "row-pop",
+          "row-rock",
+          "row-hits",
+        ].forEach((id) => {
           const section = document.getElementById(id);
           if (!section) return;
-          const hasVisible = [...section.querySelectorAll(".card")].some(c => c.style.display !== "none");
+          const hasVisible = [...section.querySelectorAll(".card")].some(
+            (c) => c.style.display !== "none",
+          );
           section.style.display = hasVisible ? "" : "none";
         });
       });
@@ -816,6 +855,8 @@ const toggleFavourite = (track) => {
   localStorage.setItem(STORAGE_KEY_FAVOURITES, JSON.stringify(favourites));
 
   renderSidebarFavourites();
+  // se il filtro generi è aperto, aggiorna la lista con i preferiti appena modificati
+  if (filtroActivo === "generi") renderGenreFilter();
 };
 
 // Helper playlist — stessa struttura dei preferiti.
@@ -1105,6 +1146,7 @@ const renderSidebar = (activePage) => {
       <div class="brand-mark">E</div>
       <span class="brand-text">EpiTunes</span>
     </div>
+    cl
     <nav class="sidebar-nav">
       <a href="index.html"  data-page="home"   ${activePage === "home" ? 'class="active"' : ""}><span class="ico">🏠</span><span>Home</span></a>
       <a href="search.html" data-page="search" ${activePage === "search" ? 'class="active"' : ""}><span class="ico">🔍</span><span>Cerca</span></a>
@@ -1137,6 +1179,41 @@ const initPage = () => {
 
   // attivo i miei badge filtro (altrimenti i bottoni non fanno niente)
   myFunction();
+
+  // drag-to-scroll verticale sulla sidebar (scrollbar nascosta via CSS)
+  const sidebar = document.querySelector(".sidebar");
+  if (sidebar) {
+    let isDragging = false;
+    let hasDragged = false;
+    let startY = 0;
+    let startScrollTop = 0;
+
+    sidebar.addEventListener("mousedown", (e) => {
+      isDragging = true;
+      hasDragged = false;
+      startY = e.pageY - sidebar.offsetTop;
+      startScrollTop = sidebar.scrollTop;
+      sidebar.style.cursor = "grabbing";
+      e.preventDefault();
+    });
+
+    sidebar.addEventListener("mousemove", (e) => {
+      if (!isDragging) return;
+      hasDragged = true;
+      const y = e.pageY - sidebar.offsetTop;
+      sidebar.scrollTop = startScrollTop - (y - startY);
+    });
+
+    const stopDrag = () => {
+      if (isDragging && hasDragged) {
+        sidebar.addEventListener("click", (e) => e.stopPropagation(), { capture: true, once: true });
+      }
+      isDragging = false;
+      sidebar.style.cursor = "";
+    };
+    sidebar.addEventListener("mouseup", stopDrag);
+    sidebar.addEventListener("mouseleave", stopDrag);
+  }
 
   return player;
 };

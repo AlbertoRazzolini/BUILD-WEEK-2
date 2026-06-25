@@ -81,6 +81,11 @@ button {
   padding: 24px 16px;
   overflow-y: auto;
   display: none;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.sidebar::-webkit-scrollbar {
+  display: none;
 }
 
 .main {

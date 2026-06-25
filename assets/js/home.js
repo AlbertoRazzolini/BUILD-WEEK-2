@@ -52,10 +52,13 @@ const fetchTracksByTerm = async (term, genre, country) => {
     const url = `${API_URL}?term=${encodeURIComponent(term)}&media=music&entity=song&limit=50${countryParam}`;
     const response = await fetch(url);
     const data = await response.json();
-    const results = genre
-      ? data.results.filter((raw) =>
-          (raw.primaryGenreName || "").toLowerCase().includes(genre.toLowerCase()),
-        )
+    // genre può essere una stringa singola o un array di stringhe
+    const genres = genre ? (Array.isArray(genre) ? genre : [genre]) : null;
+    const results = genres
+      ? data.results.filter((raw) => {
+          const g = (raw.primaryGenreName || "").toLowerCase();
+          return genres.some((t) => g.includes(t.toLowerCase()));
+        })
       : data.results;
     const tracks = results.slice(0, 25).map((raw) => new Track(raw));
     return tracks;
@@ -97,7 +100,7 @@ const loadHome = async () => {
     // dopo laltra ma tutte insieme e snellire il cariacamento
     const [popTracks, rockTracks, hitsTracks] = await Promise.all([
       fetchTracksByTerm("pop", "Pop"),
-      fetchTracksByTerm("rock", "Rock"),
+      fetchTracksByTerm("rock", ["rock", "alternative", "metal", "punk", "grunge", "indie"]),
       fetchTracksByTerm("pop italiano", "Pop", "IT"),
     ]);
 
