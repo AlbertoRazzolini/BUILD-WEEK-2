@@ -686,6 +686,10 @@ button {
   text-overflow: ellipsis;
   margin: 0;
 }
+.player-title:hover,
+.player-artist:hover {
+  text-decoration: underline;
+}
 
 .player-center {
   display: flex;
