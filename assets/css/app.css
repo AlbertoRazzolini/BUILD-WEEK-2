@@ -386,7 +386,9 @@ button {
   opacity: 0;
   transition: opacity 0.2s;
 }
-.card-fav ion-icon {
+.card-fav ion-icon,
+.track-fav ion-icon,
+.btn-fav-big ion-icon {
   display: block; /* ion-icon è inline per default, block lo centra nel grid */
 }
 .card:hover .card-fav,
@@ -543,6 +545,8 @@ button {
   border: 1px solid var(--text-secondary);
   color: var(--text-secondary);
   font-size: 18px;
+  display: grid;
+  place-items: center;
 }
 .btn-fav-big.is-fav {
   color: var(--danger);
@@ -589,6 +593,8 @@ button {
   border: none;
   color: var(--text-secondary);
   font-size: 16px;
+  display: grid;
+  place-items: center;
 }
 .track-fav.is-fav {
   color: var(--danger);

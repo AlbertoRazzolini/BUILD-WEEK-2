@@ -181,11 +181,16 @@ const buildCard = (track, currentTracklist = []) => { // <-- MODIFICA: Accetta l
   sub.addEventListener("click", (e) => e.stopPropagation());
 
   const btnFav = card.querySelector(".card-fav");
-  btnFav.classList.toggle("is-fav", isFavourite(track.id));
+  const heartIcon = btnFav.querySelector("ion-icon");
+  const initFav = isFavourite(track.id);
+  btnFav.classList.toggle("is-fav", initFav);
+  if (heartIcon) heartIcon.setAttribute("name", initFav ? "heart" : "heart-outline");
   btnFav.addEventListener("click", (event) => {
     event.stopPropagation();
     toggleFavourite(track);
-    btnFav.classList.toggle("is-fav", isFavourite(track.id));
+    const nowFav = isFavourite(track.id);
+    btnFav.classList.toggle("is-fav", nowFav);
+    if (heartIcon) heartIcon.setAttribute("name", nowFav ? "heart" : "heart-outline");
   });
 
   // qui attacco il "+" sulla card per mettere il brano in una playlist (come nelle card di ricerca)
