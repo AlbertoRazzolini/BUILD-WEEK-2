@@ -117,6 +117,13 @@ button {
 .sidebar-filter-item {
   cursor: default;
 }
+
+/* Pulsanti filtro (Artisti / Album / Generi) — hover e stato attivo in giallo accent */
+.badge.bg-secondary:hover,
+.badge.bg-success {
+  background-color: var(--accent) !important;
+  color: #6C757D !important;
+}
 .genre-hidden {
   display: none !important;
 }
