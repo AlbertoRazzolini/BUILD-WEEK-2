@@ -162,7 +162,8 @@ const tmplCard = document.getElementById("tmpl-card");
 
 const buildCard = (track, currentTracklist = []) => { // <-- MODIFICA: Accetta l'array della riga
   const card = tmplCard.content.firstElementChild.cloneNode(true);
-  card.dataset.id = track.id; // serve a Player.updateNowPlayingUI() per evidenziare la card in riproduzione
+  card.dataset.id = track.id;    // serve a Player.updateNowPlayingUI() per evidenziare la card in riproduzione
+  card.dataset.genre = (track.genre || "").toLowerCase(); // serve al filtro generi della sidebar
 
   const img = card.querySelector("img");
   img.src = track.cover;
