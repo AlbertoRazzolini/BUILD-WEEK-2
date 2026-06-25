@@ -257,6 +257,39 @@ const initRowNav = () => {
     scroller.querySelector(".row-btn-next")?.addEventListener("click", () =>
       list.scrollBy({ left: getAmt(), behavior: "smooth" })
     );
+
+    // drag-to-scroll: tieni premuto e trascina per scorrere orizzontalmente
+    let isDragging = false;
+    let hasDragged = false;
+    let startX = 0;
+    let startScrollLeft = 0;
+
+    list.addEventListener("mousedown", (e) => {
+      isDragging = true;
+      hasDragged = false;
+      startX = e.pageX - list.offsetLeft;
+      startScrollLeft = list.scrollLeft;
+      list.style.cursor = "grabbing";
+      e.preventDefault();
+    });
+
+    list.addEventListener("mousemove", (e) => {
+      if (!isDragging) return;
+      hasDragged = true;
+      const x = e.pageX - list.offsetLeft;
+      list.scrollLeft = startScrollLeft - (x - startX);
+    });
+
+    const stopDrag = () => {
+      if (isDragging && hasDragged) {
+        // intercetta e blocca il click che segue il mouseup, poi si auto-rimuove
+        list.addEventListener("click", (e) => e.stopPropagation(), { capture: true, once: true });
+      }
+      isDragging = false;
+      list.style.cursor = "";
+    };
+    list.addEventListener("mouseup", stopDrag);
+    list.addEventListener("mouseleave", stopDrag);
   });
 };
 
