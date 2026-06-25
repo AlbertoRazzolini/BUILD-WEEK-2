@@ -76,7 +76,7 @@ const renderHero = (artist, firstTrack, tracks = []) => {
   btnPlay.setAttribute("aria-label", "Play");
   btnPlay.textContent = "▶";
   btnPlay.addEventListener("click", () => player.play(firstTrack, tracks));
-
+//sdfs
   const actions = document.createElement("div");
   actions.classList.add("hero-actions");
   actions.append(btnPlay);
