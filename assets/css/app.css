@@ -117,6 +117,9 @@ button {
 .sidebar-filter-item {
   cursor: default;
 }
+.genre-hidden {
+  display: none !important;
+}
 .sidebar-filter-item.active-genre {
   background: var(--bg-elev-hover);
   color: var(--text-primary);
