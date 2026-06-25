@@ -149,6 +149,12 @@ const myFunction = () => {
       b.classList.remove("bg-success");
       b.classList.add("bg-secondary");
     });
+    // ripristina card e sezioni nascoste dal filtro generi
+    document.querySelectorAll(".card[data-genre]").forEach(c => (c.style.display = ""));
+    ["row-history", "row-favourites", "row-pop", "row-rock", "row-hits"].forEach(id => {
+      const section = document.getElementById(id);
+      if (section) section.style.display = "";
+    });
   };
 
   myButtons.forEach((singleButton) => {
@@ -258,10 +264,27 @@ const renderResultados = (lista, tipo) => {
         window.location.href = `artist.html?id=${elemento.id}`;
       });
     } else if (tipo === "generi") {
-      // qui elemento è un genere, quindi mostro solo il suo nome
       const ico = item.querySelector(".ico");
       if (ico) ico.textContent = "🎵";
       item.querySelector(".filter-label").textContent = elemento.title;
+      item.style.cursor = "pointer";
+      item.addEventListener("click", () => {
+        // evidenzia il genere attivo, toglie l'attivo dagli altri
+        contenedor.querySelectorAll(".sidebar-filter-item").forEach(el => el.classList.remove("active-genre"));
+        item.classList.add("active-genre");
+        // filtra le card della home che hanno data-genre corrispondente
+        const genreLower = elemento.title.toLowerCase();
+        document.querySelectorAll(".card[data-genre]").forEach(card => {
+          card.style.display = card.dataset.genre.includes(genreLower) ? "" : "none";
+        });
+        // nasconde le sezioni della home che non hanno più card visibili
+        ["row-history", "row-favourites", "row-pop", "row-rock", "row-hits"].forEach(id => {
+          const section = document.getElementById(id);
+          if (!section) return;
+          const hasVisible = [...section.querySelectorAll(".card")].some(c => c.style.display !== "none");
+          section.style.display = hasVisible ? "" : "none";
+        });
+      });
     }
 
     return item;

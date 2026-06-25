@@ -31,10 +31,10 @@ const gridTracks   = document.querySelector("#grid-tracks");
 const gridAlbums   = document.querySelector("#grid-albums");
 const gridArtists  = document.querySelector("#grid-artists");
 
-const renderTrackCard = (track) => {
+const renderTrackCard = (track, tracklist = []) => {
   const card = document.createElement("div");
   card.classList.add("card");
-  card.dataset.id = track.id; // serve a Player.updateNowPlayingUI() per evidenziare la card in riproduzione
+  card.dataset.id = track.id;
 
   const imageWrap = document.createElement("div");
   imageWrap.classList.add("card-image-wrap");
@@ -43,43 +43,48 @@ const renderTrackCard = (track) => {
   img.alt = track.title;
   imageWrap.appendChild(img);
 
-  const btnPlay = document.createElement("button");
-  btnPlay.classList.add("card-play");
-  btnPlay.setAttribute("aria-label", "Play");
-  btnPlay.textContent = "▶";
-  btnPlay.addEventListener("click", (event) => {
-    event.stopPropagation();
-    player.play(track);
-  });
-  imageWrap.appendChild(btnPlay);
+  // card-add ("+") in alto a sinistra dentro imageWrap — coerente con le card della home
+  imageWrap.appendChild(makeAddButton(track, "card-add"));
 
+  // card-fav (cuore) in alto a destra dentro imageWrap — coerente con le card della home
   const btnFav = document.createElement("button");
   btnFav.classList.add("card-fav");
   btnFav.classList.toggle("is-fav", isFavourite(track.id));
   btnFav.setAttribute("aria-label", "Preferito");
-  btnFav.textContent = "♥";
+  const favIcon = document.createElement("ion-icon");
+  favIcon.setAttribute("name", "heart-outline");
+  btnFav.appendChild(favIcon);
   btnFav.addEventListener("click", (event) => {
     event.stopPropagation();
     toggleFavourite(track);
     btnFav.classList.toggle("is-fav", isFavourite(track.id));
   });
+  imageWrap.appendChild(btnFav);
 
-  // qui attacco il mio "+" sulla card per mettere il brano in una playlist
-  imageWrap.appendChild(makeAddButton(track, "card-add"));
+  const btnPlay = document.createElement("button");
+  btnPlay.classList.add("card-play");
+  btnPlay.setAttribute("aria-label", "Play");
+  const playIcon = document.createElement("ion-icon");
+  playIcon.setAttribute("name", "play-outline");
+  btnPlay.appendChild(playIcon);
+  btnPlay.addEventListener("click", (event) => {
+    event.stopPropagation();
+    player.play(track, tracklist);
+  });
+  imageWrap.appendChild(btnPlay);
 
   const title = document.createElement("p");
   title.classList.add("card-title", "text-white");
   title.textContent = track.title;
 
-  // <a> invece di <p>: click su artista → artist.html; stopPropagation evita il play
   const sub = document.createElement("a");
   sub.className = "card-sub";
   sub.textContent = track.artist;
   sub.href = `artist.html?id=${track.artistId}`;
   sub.addEventListener("click", (e) => e.stopPropagation());
 
-  card.append(imageWrap, btnFav, title, sub);
-  card.addEventListener("click", () => player.play(track));
+  card.append(imageWrap, title, sub);
+  card.addEventListener("click", () => player.play(track, tracklist));
 
   return card;
 };
@@ -168,7 +173,8 @@ const doSearch = async (term) => {
     ),
   ]);
 
-  showRow(rowTracks, gridTracks, tracksData.results.map((raw) => new Track(raw)), renderTrackCard);
+  const tracks = tracksData.results.map((raw) => new Track(raw));
+  showRow(rowTracks, gridTracks, tracks, (track) => renderTrackCard(track, tracks));
   showRow(rowAlbums, gridAlbums, albumsData.results.map((raw) => new Album(raw)), renderAlbumCard);
   showRow(rowArtists, gridArtists, artistsData.results.map((raw) => new Artist(raw)), renderArtistCard);
 };

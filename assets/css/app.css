@@ -99,6 +99,25 @@ button {
 
 /* ============================ Sidebar ============================ */
 
+#sidebar-filter-results,
+#sidebar-favs-list,
+#sidebar-playlists-list,
+#mobile-favs-list,
+#mobile-playlists-list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.sidebar-filter-item {
+  cursor: default;
+}
+.sidebar-filter-item.active-genre {
+  background: var(--bg-elev-hover);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -346,7 +365,7 @@ button {
 .card-fav {
   position: absolute;
   top: 8px;
-  left: 48px; /* affiancato al card-add (left: 8px, width: 32px → 8+32+8 = 48) */
+  right: 8px;
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -358,6 +377,9 @@ button {
   place-items: center;
   opacity: 0;
   transition: opacity 0.2s;
+}
+.card-fav ion-icon {
+  display: block; /* ion-icon è inline per default, block lo centra nel grid */
 }
 .card:hover .card-fav,
 .card-fav.is-fav {
@@ -449,7 +471,7 @@ button {
   display: flex;
   gap: 24px;
   align-items: flex-end;
-  padding: 24px 0 16px 0;
+  padding: 24px 24px 16px 24px;
 }
 .album-cover {
   width: 220px;
