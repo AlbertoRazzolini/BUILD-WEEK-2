@@ -50,8 +50,7 @@ const fetchTracksByTerm = async (term, genre, country) => {
   try {
     const countryParam = country ? `&country=${country}` : "";
     const url = `${API_URL}?term=${encodeURIComponent(term)}&media=music&entity=song&limit=50${countryParam}`;
-    const response = await fetch(url);
-    const data = await response.json();
+    const data = await fetchJSONP(url);
     // genre può essere una stringa singola o un array di stringhe
     const genres = genre ? (Array.isArray(genre) ? genre : [genre]) : null;
     const results = genres
