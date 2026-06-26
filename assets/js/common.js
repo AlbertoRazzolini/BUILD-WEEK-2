@@ -152,7 +152,9 @@ const renderGenreFilter = () => {
     const contenedor = document.getElementById("sidebar-filter-results");
     if (contenedor) {
       contenedor.querySelectorAll(".sidebar-filter-item").forEach((el) => {
-        if (el.querySelector(".filter-label")?.textContent === filtroGeneroActivo) {
+        if (
+          el.querySelector(".filter-label")?.textContent === filtroGeneroActivo
+        ) {
           el.classList.add("active-genre");
         }
       });
@@ -176,8 +178,14 @@ const myFunction = () => {
       b.classList.add("bg-secondary");
     });
     // ripristina card, sezioni e preferiti sidebar nascosti dal filtro generi
-    document.querySelectorAll(".card[data-genre]").forEach((c) => (c.style.display = ""));
-    document.querySelectorAll("#sidebar-favs-list [data-genre], #mobile-favs-list [data-genre]").forEach((item) => item.classList.remove("genre-hidden"));
+    document
+      .querySelectorAll(".card[data-genre]")
+      .forEach((c) => (c.style.display = ""));
+    document
+      .querySelectorAll(
+        "#sidebar-favs-list [data-genre], #mobile-favs-list [data-genre]",
+      )
+      .forEach((item) => item.classList.remove("genre-hidden"));
     [
       "row-history",
       "row-favourites",
@@ -303,12 +311,21 @@ const renderResultados = (lista, tipo) => {
         // filtra le card della home e i preferiti in sidebar per genere
         const genreLower = elemento.title.toLowerCase();
         document.querySelectorAll(".card[data-genre]").forEach((card) => {
-          card.style.display = card.dataset.genre.includes(genreLower) ? "" : "none";
+          card.style.display = card.dataset.genre.includes(genreLower)
+            ? ""
+            : "none";
         });
-        document.querySelectorAll("#sidebar-favs-list [data-genre], #mobile-favs-list [data-genre]").forEach((item) => {
-          const g = item.dataset.genre;
-          item.classList.toggle("genre-hidden", !!(g && !g.includes(genreLower)));
-        });
+        document
+          .querySelectorAll(
+            "#sidebar-favs-list [data-genre], #mobile-favs-list [data-genre]",
+          )
+          .forEach((item) => {
+            const g = item.dataset.genre;
+            item.classList.toggle(
+              "genre-hidden",
+              !!(g && !g.includes(genreLower)),
+            );
+          });
         // nasconde le sezioni della home che non hanno più card visibili
         [
           "row-ai",
@@ -437,7 +454,12 @@ class Player {
     // Gestione automatica a fine canzone — in home mostra i consigli AI se pronti
     this.audio.addEventListener("ended", () => {
       const siamoInHome = document.getElementById("row-ai") !== null;
-      console.log("[AI] ended — siamoInHome:", siamoInHome, "| consigliInBackground:", consigliInBackground);
+      console.log(
+        "[AI] ended — siamoInHome:",
+        siamoInHome,
+        "| consigliInBackground:",
+        consigliInBackground,
+      );
 
       if (
         siamoInHome &&
@@ -1225,7 +1247,10 @@ const initPage = () => {
 
     const stopDrag = () => {
       if (isDragging && hasDragged) {
-        sidebar.addEventListener("click", (e) => e.stopPropagation(), { capture: true, once: true });
+        sidebar.addEventListener("click", (e) => e.stopPropagation(), {
+          capture: true,
+          once: true,
+        });
       }
       isDragging = false;
       sidebar.style.cursor = "";
@@ -1246,7 +1271,12 @@ const ottieniSuggerimentiAI = async (currentTrack, buttonElement) => {
   if (!currentTrack) return;
   if (automazioneGiaPartitaPerTraccia === currentTrack.id) return;
   automazioneGiaPartitaPerTraccia = currentTrack.id;
-  console.log("[AI] fetch avviato per:", currentTrack.title, "—", currentTrack.artist);
+  console.log(
+    "[AI] fetch avviato per:",
+    currentTrack.title,
+    "—",
+    currentTrack.artist,
+  );
 
   if (buttonElement) {
     buttonElement.disabled = true;
@@ -1274,7 +1304,8 @@ const ottieniSuggerimentiAI = async (currentTrack, buttonElement) => {
 
     const rawText = await response.text();
     console.log("[AI] risposta webhook testo:", rawText);
-    if (!rawText || !rawText.trim()) throw new Error("Webhook risposta vuota — workflow n8n non attivo?");
+    if (!rawText || !rawText.trim())
+      throw new Error("Webhook risposta vuota — workflow n8n non attivo?");
     const canzoniConsigliateRaw = JSON.parse(rawText);
     console.log("[AI] risposta webhook raw:", canzoniConsigliateRaw);
     let canzoniConsigliate = [];
@@ -1299,7 +1330,11 @@ const ottieniSuggerimentiAI = async (currentTrack, buttonElement) => {
         (id) => canzoniConsigliate.find((t) => t.id === id),
       ),
     };
-    console.log("[AI] consigliInBackground pronti:", consigliInBackground.tracce.length, "tracce");
+    console.log(
+      "[AI] consigliInBackground pronti:",
+      consigliInBackground.tracce.length,
+      "tracce",
+    );
 
     if (buttonElement) {
       buttonElement.disabled = false;
@@ -1351,7 +1386,8 @@ const mostraConsigliSbloccati = () => {
   cardsProdotte.forEach((card) => {
     card.addEventListener("click", () => setTimeout(chiudiModale, 150));
     const btnPlay = card.querySelector(".card-play");
-    if (btnPlay) btnPlay.addEventListener("click", () => setTimeout(chiudiModale, 150));
+    if (btnPlay)
+      btnPlay.addEventListener("click", () => setTimeout(chiudiModale, 150));
   });
 
   modal.classList.remove("d-none");
