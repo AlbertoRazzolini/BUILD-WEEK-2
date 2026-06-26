@@ -1,162 +1,886 @@
 /* ============================================================
-   artist.js — pagina dettaglio artista
-   ============================================================
+   EpiTunes — CSS base
+   Layout 3 zone (sidebar / main / player) responsive con Grid.
+   Palette scura ispirata a Spotify, accenti gialli brand Epicode.
+   Lo studente NON deve modificare questo file salvo voglia
+   personalizzare l'aspetto. Tutto il lavoro è in HTML e JS.
+   ============================================================ */
 
-   COSA DEVI FARE
-   1) initPage("home")
-   2) Leggi l'id dell'artista dalla query string (URLSearchParams).
-   3) Se manca l'id -> messaggio "Artista non trovato" e stop.
-   4) fetch /lookup?id=ID&entity=song&limit=15
-      - results[0] è l'artist
-      - results[1..] sono le top track
-   5) Costruisci #artist-hero:
-      - kicker "ARTISTA"
-      - nome artista grande
-      - genere (primaryGenreName) + numero ascoltatori (random, es. Math.random() * 5_000_000)
-      - button "Play" -> player.play(prima track)
-   6) Costruisci #top-tracks come tracklist (uguale a album).
-*/
-
-const player = initPage();
-
-const artistHero = document.querySelector("#artist-hero");
-const topTracks  = document.querySelector("#top-tracks");
-const searchInput = document.getElementById("search-input");
-
-// appena digiti almeno 3 lettere, salva il termine e vai alla pagina di ricerca dedicata
-const goToSearch = (term) => {
-  if (term.length >= 1) {
-    localStorage.setItem(STORAGE_KEY_LAST_SEARCH, term);
-    window.location.href = "search.html";
-  }
-};
-const debouncedGoToSearch = debounce(goToSearch, 400);
-
-if (searchInput) {
-  searchInput.addEventListener("input", (event) => {
-    debouncedGoToSearch(event.target.value.trim());
-  });
+:root {
+  --bg-base: #121212;
+  --bg-elev: #181818;
+  --bg-elev-hover: #282828;
+  --bg-sidebar: #000000;
+  --bg-player: #181818;
+  --bg-input: #ffffff;
+  --text-primary: #ffffff;
+  --text-secondary: #b3b3b3;
+  --text-input: #000000;
+  --accent: #f7d800; /* giallo Epicode */
+  --accent-dark: #d6ba00;
+  --success: #1ed760; /* verde "play" */
+  --danger: #e25555;
+  --border: #2a2a2a;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
 }
 
-const showNotFound = () => {
-  const msg = document.createElement("p");
-  msg.textContent = "Artista non trovato";
-  artistHero.replaceChildren(msg);
-  topTracks.replaceChildren();
-};
+* {
+  box-sizing: border-box;
+}
 
-const renderHero = (artist, firstTrack, tracks = []) => {
-  const listeners = Math.floor(Math.random() * 5_000_000);
+.cursor-pointer {
+  cursor: pointer;
+}
 
-  // cover: usa la copertina del primo brano (iTunes API non fornisce foto artista)
-  const cover = document.createElement("div");
-  cover.classList.add("album-cover");
-  cover.style.borderRadius = "50%"; // forma circolare — convenzione visiva per gli artisti
-  if (firstTrack && firstTrack.cover) {
-    const coverImg = document.createElement("img");
-    coverImg.src = bigArt(firstTrack.cover);
-    coverImg.alt = artist.name;
-    cover.appendChild(coverImg);
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.user-pill {
+  color: white;
+}
+
+/* ============================ Layout 3 zone ============================ */
+
+.app {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr 90px;
+  grid-template-areas:
+    "main"
+    "player";
+  height: 100vh;
+  height: 100dvh; /* dvh = dynamic viewport height: esclude la navigation bar mobile */
+}
+
+.sidebar {
+  grid-area: sidebar;
+  background: var(--bg-sidebar);
+  padding: 24px 16px;
+  overflow-y: auto;
+  display: none;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.sidebar::-webkit-scrollbar {
+  display: none;
+}
+
+.main {
+  grid-area: main;
+  background: linear-gradient(180deg, #1f1f1f 0%, var(--bg-base) 280px);
+  overflow-y: auto;
+  position: relative;
+}
+
+.player {
+  grid-area: player;
+  background: var(--bg-player);
+  border-top: 1px solid var(--border);
+  padding: 12px 16px;
+}
+
+/* ============================ Sidebar ============================ */
+
+#sidebar-filter-results,
+#sidebar-favs-list,
+#sidebar-playlists-list,
+#mobile-favs-list,
+#mobile-playlists-list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.sidebar-filter-item {
+  cursor: default;
+}
+
+/* Pulsanti filtro (Artisti / Album / Generi) — hover e stato attivo in giallo accent */
+.badge.bg-secondary:hover,
+.badge.bg-success {
+  background-color: var(--accent) !important;
+  color: #6C757D !important;
+}
+.genre-hidden {
+  display: none !important;
+}
+.sidebar-filter-item.active-genre {
+  background: var(--bg-elev-hover);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px 24px 8px;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.5px;
+}
+.brand-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #000;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  justify-content: center;
+  padding: 10px 0;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.sidebar-nav a:hover {
+  color: var(--text-primary);
+  background: var(--bg-elev-hover);
+}
+.sidebar-nav a.active {
+  color: var(--text-primary);
+  background: var(--bg-elev);
+}
+.sidebar-nav a .ico {
+  font-size: 18px;
+  width: 22px;
+  text-align: center;
+}
+
+.sidebar-section-title {
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  padding: 16px 12px 8px 12px;
+  margin: 0;
+}
+
+.sidebar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 4px;
+  list-style: none;
+  margin: 0;
+}
+.sidebar-list li {
+  padding: 6px 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-list li:hover {
+  color: var(--text-primary);
+  background: var(--bg-elev);
+}
+
+.brand-text,
+.sidebar-section-title,
+.sidebar-list,
+.sidebar-nav a span:not(.ico) {
+  display: none;
+}
+
+/* MODIFICHE IMMAGINE SIDEBAR ARTISTA - MARCO */
+
+.artist-cover {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;      /* Crea il cerchio */
+  object-fit: cover;       /* Evita che l'immagine si deformi */
+  margin-right: 12px;      /* Distanza dal nome */
+  margin-bottom: 12px;
+}
+
+
+
+/* ============================ Topbar ============================ */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: rgba(18, 18, 18, 0.7);
+  backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+}
+.topbar-nav {
+  display: flex;
+  gap: 8px;
+}
+.nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 25px;
+  line-height: 1;
+}
+.user-pill {
+  background: rgba(0, 0, 0, 0.6);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+/* ============================ Sezioni / Rows ============================ */
+
+.home,
+.search,
+.album-page,
+.artist-page {
+  padding: 16px 24px 32px 24px;
+}
+
+.row {
+  margin-top: 12px;
+}
+.row h2 {
+  margin: 0 0 12px 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+}
+.grid .card {
+  min-width: 0;
+  max-width: none;
+}
+
+/* ============================ Card ============================ */
+
+.card {
+  min-width: 160px;
+  max-width: 160px;
+  background: var(--bg-elev);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  transition: background 0.18s ease;
+  position: relative;
+  cursor: pointer;
+}
+.card:hover {
+  background: var(--bg-elev-hover);
+}
+.card-image-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: 12px;
+  background: #000;
+}
+.card-image-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.card-image-wrap.round {
+  border-radius: 50%;
+}
+.card-title {
+  font-weight: 700;
+  font-size: 14px;
+  margin: 0 0 4px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.card-sub {
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-play {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--success);
+  color: #000;
+  border: none;
+  font-size: 20px;
+  display: grid;
+  place-items: center;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+}
+.card:hover .card-play {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.card-fav {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  border: none;
+  font-size: 16px;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.card-fav ion-icon,
+.track-fav ion-icon,
+.btn-fav-big ion-icon {
+  display: block; /* ion-icon è inline per default, block lo centra nel grid */
+}
+.card:hover .card-fav,
+.card-fav.is-fav {
+  opacity: 1;
+}
+.card-fav.is-fav {
+  color: var(--danger);
+}
+
+/* Pulsante "+" — aggiunge il brano a "La tua playlist" (in alto a sinistra) */
+.card-add {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.card:hover .card-add,
+.card-add.is-added {
+  opacity: 1;
+}
+.card-add.is-added {
+  color: var(--success);
+}
+
+/* ============================ Menù "aggiungi a playlist" ============================ */
+
+.pl-menu {
+  position: absolute;
+  z-index: 2000;
+  min-width: 210px;
+  max-width: 280px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--bg-elev-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px;
+  box-shadow: var(--shadow);
+}
+.pl-menu-header {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 4px 8px 6px;
+}
+.pl-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pl-menu-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.pl-menu-create {
+  color: var(--success);
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+.pl-menu-empty {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 6px 10px;
+  margin: 0;
+}
+
+/* ============================ Hero album / artista ============================ */
+
+.album-hero,
+.artist-hero {
+  display: flex;
+  gap: 24px;
+  align-items: flex-end;
+  padding: 24px 24px 16px 24px;
+}
+.album-cover {
+  width: 220px;
+  height: 220px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: #000;
+  box-shadow: var(--shadow);
+  flex-shrink: 0;
+}
+.album-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.hero-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.hero-kicker {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 700;
+}
+.hero-title {
+  font-size: clamp(32px, 6vw, 72px);
+  font-weight: 900;
+  margin: 0;
+  line-height: 1.05;
+}
+.hero-sub {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin: 0;
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0 24px 0;
+}
+.btn-play-big {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--success);
+  color: #000;
+  border: none;
+  font-size: 24px;
+}
+.btn-fav-big {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--text-secondary);
+  color: var(--text-secondary);
+  font-size: 18px;
+  display: grid;
+  place-items: center;
+}
+.btn-fav-big.is-fav {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+/* ============================ Tracklist ============================ */
+
+.tracklist {
+  margin-top: 8px;
+}
+.track-row {
+  display: grid;
+  grid-template-columns: 32px 1fr 80px 40px 40px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.track-row:hover {
+  background: var(--bg-elev);
+}
+.track-row.is-playing {
+  color: var(--success);
+}
+.track-num {
+  color: var(--text-secondary);
+  text-align: center;
+}
+.track-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.track-time {
+  color: var(--text-secondary);
+  text-align: right;
+}
+.track-fav {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 16px;
+  display: grid;
+  place-items: center;
+}
+.track-fav.is-fav {
+  color: var(--danger);
+}
+
+/* Pulsante "+/✓" — aggiunge/rimuove il brano da "La tua playlist" */
+.track-add {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 20px;
+  line-height: 1;
+}
+.track-add.is-added {
+  color: var(--success);
+}
+
+/* ============================ Search ============================ */
+
+.search-box {
+  margin-top: 8px;
+  margin-bottom: 16px;
+}
+.search-input {
+  width: 100%;
+  min-width: 250px;
+  padding: 12px 16px;
+  border-radius: 999px;
+  border: none;
+  background: var(--bg-input);
+  color: var(--text-input);
+  font-size: 14px;
+  outline: none;
+}
+
+/* ============================ Player ============================ */
+
+.player {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  align-items: center;
+  gap: 16px;
+}
+.player-track {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.player-cover {
+  width: 56px;
+  height: 56px;
+  border-radius: 4px;
+  background: #000;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.player-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.player-meta {
+  min-width: 0;
+}
+.player-title {
+  display: block; /* <a> è inline di default — block lo mette su riga propria */
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+.player-artist {
+  display: block;
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+.player.has-track .player-title:hover,
+.player.has-track .player-artist:hover {
+  text-decoration: underline;
+}
+
+.player-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.player-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.btn-ctrl {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 16px;
+}
+.btn-ctrl:hover {
+  color: var(--text-primary);
+}
+.btn-play {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #fff;
+  color: #000;
+  border: none;
+  font-size: 14px;
+}
+
+.player-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 600px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.progress-bar,
+.volume-bar {
+  flex: 1;
+  height: 4px;
+  background: #4d4d4d;
+  border-radius: 2px;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+}
+.progress-fill,
+.volume-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--text-primary);
+  border-radius: 2px;
+}
+.progress-bar:hover .progress-fill,
+.volume-bar:hover .volume-fill {
+  background: var(--success);
+}
+
+.player-right {
+  display: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.volume-bar {
+  width: 120px;
+}
+
+/* ============================ Carosello con frecce ============================ */
+
+/* wrapper relativo: serve come riferimento per il posizionamento assoluto dei bottoni */
+.row-scroller {
+  position: relative;
+}
+
+/* nasconde la scrollbar in tutti i browser, mantenendo lo scroll funzionale:
+   scrollbar-width → Firefox
+   -ms-overflow-style → IE / Edge legacy
+   ::-webkit-scrollbar → Chrome, Safari, Edge moderno */
+.row-scroller .d-flex {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.row-scroller .d-flex::-webkit-scrollbar {
+  display: none;
+}
+
+/* bottone freccia: centrato verticalmente sul carosello, appare solo su hover della riga */
+.row-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 22px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none; /* non intercetta click quando invisibile */
+}
+.row-scroller:hover .row-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+.row-btn-prev { left: 0; }
+.row-btn-next { right: 0; }
+
+/* ============================ Loading / empty ============================ */
+
+.loader {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+.empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+/* ============================ Responsive (mobile-first) ============================ */
+
+/* Default (sotto i 576px): sidebar nascosta del tutto, si usa l'hamburger/offcanvas mobile */
+
+/* Sotto 576px: topbar compatta — home e hamburger equidistanti, search flessibile */
+@media (max-width: 575px) {
+  .topbar {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .topbar > div {
+    flex: 1;
+    min-width: 0;
+  }
+  .search-input {
+    min-width: 0;
+  }
+}
+
+/* Da 576px: sidebar compatta a icone, niente testo (il "menu" pieno appare da 768px in su) */
+@media (min-width: 576px) {
+  .app {
+    grid-template-columns: 80px 1fr;
+    grid-template-areas:
+      "sidebar main"
+      "player  player";
+  }
+  .sidebar {
+    display: block;
   }
 
-  const kicker = document.createElement("p");
-  kicker.classList.add("hero-kicker");
-  kicker.textContent = "ARTISTA";
-
-  const title = document.createElement("h1");
-  title.classList.add("hero-title");
-  title.textContent = artist.name;
-
-  const sub = document.createElement("p");
-  sub.classList.add("hero-sub");
-  sub.textContent = `${artist.genre || "Artista"} · ${listeners.toLocaleString("it-IT")} ascoltatori mensili`;
-
-  const btnPlay = document.createElement("button");
-  btnPlay.classList.add("btn-play-big");
-  btnPlay.setAttribute("aria-label", "Play");
-  btnPlay.textContent = "▶";
-  btnPlay.addEventListener("click", () => player.play(firstTrack, tracks));
-//sdfs
-  const actions = document.createElement("div");
-  actions.classList.add("hero-actions");
-  actions.append(btnPlay);
-
-  const meta = document.createElement("div");
-  meta.classList.add("hero-meta");
-  meta.append(kicker, title, sub, actions);
-
-  artistHero.replaceChildren(cover, meta);
-};
-
-const renderTopTracks = (tracks) => {
-  const rows = tracks.map((track, index) => {
-    const num = document.createElement("span");
-    num.classList.add("track-num");
-    num.textContent = String(index + 1);
-
-    const trackTitle = document.createElement("span");
-    trackTitle.classList.add("track-title");
-    trackTitle.textContent = track.title;
-
-    const time = document.createElement("span");
-    time.classList.add("track-time");
-    time.textContent = formatTime(track.durationMs);
-
-    const btnFav = document.createElement("button");
-    btnFav.classList.add("track-fav");
-    btnFav.classList.toggle("is-fav", isFavourite(track.id));
-    btnFav.setAttribute("aria-label", "Preferito");
-    const heartIcon = document.createElement("ion-icon");
-    heartIcon.setAttribute("name", isFavourite(track.id) ? "heart" : "heart-outline");
-    btnFav.appendChild(heartIcon);
-    btnFav.addEventListener("click", (event) => {
-      event.stopPropagation();
-      toggleFavourite(track);
-      const nowFav = isFavourite(track.id);
-      btnFav.classList.toggle("is-fav", nowFav);
-      heartIcon.setAttribute("name", nowFav ? "heart" : "heart-outline");
-    });
-
-    // qui metto il mio "+" sulla riga per aggiungere il brano a una playlist
-    const btnAdd = makeAddButton(track, "track-add");
-
-    const row = document.createElement("div");
-    row.classList.add("track-row");
-    row.dataset.id = track.id;
-    row.append(num, trackTitle, time, btnFav, btnAdd);
-    row.addEventListener("click", () => player.play(track, tracks)); // MARCO- aggiunto ,tracks
-
-    return row;
-  });
-
-  topTracks.replaceChildren(...rows);
-};
-
-const loadArtist = async () => {
-  const id = new URLSearchParams(window.location.search).get("id");
-
-  if (!id) {
-    showNotFound();
-    return;
+  #sidebar-favs-list,
+  #sidebar-playlists-list {
+    padding: 0 !important;
   }
 
-  const data = await fetchJSON(`${API_BASE}/lookup?id=${id}&entity=song&limit=15`);
-
-  if (!data.results.length) {
-    showNotFound();
-    return;
+  /* da qui in su lo schermo è abbastanza largo da mostrare la barra del volume;
+     sotto, il volume è gestito dai tasti fisici del dispositivo */
+  .player-right {
+    display: flex;
   }
+}
 
-  const artist = new Artist(data.results[0]);
-  const tracks = data.results.slice(1).map((raw) => new Track(raw));
-
-  if (!tracks.length) {
-    showNotFound();
-    return;
+/* Da 768px: sidebar piena con testo */
+@media (min-width: 768px) {
+  .app {
+    grid-template-columns: 240px 1fr;
   }
-
-  renderHero(artist, tracks[0], tracks); // // MARCO- aggiunto ,tracks
-  renderTopTracks(tracks);
-};
-
-loadArtist();
+  .brand-text,
+  .sidebar-nav a span:not(.ico) {
+    display: inline;
+  }
+  .sidebar-section-title {
+    display: block;
+  }
+  .sidebar-list {
+    display: flex;
+  }
+  .sidebar-nav a {
+    justify-content: flex-start;
+    padding: 8px 12px;
+  }
+}
