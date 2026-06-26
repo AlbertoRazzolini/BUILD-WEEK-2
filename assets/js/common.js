@@ -1275,7 +1275,10 @@ const ottieniSuggerimentiAI = async (currentTrack, buttonElement) => {
 
     if (!response.ok) throw new Error("Errore server " + response.status);
 
-    const canzoniConsigliateRaw = await response.json();
+    const rawText = await response.text();
+    console.log("[AI] risposta webhook testo:", rawText);
+    if (!rawText || !rawText.trim()) throw new Error("Webhook risposta vuota — workflow n8n non attivo?");
+    const canzoniConsigliateRaw = JSON.parse(rawText);
     console.log("[AI] risposta webhook raw:", canzoniConsigliateRaw);
     let canzoniConsigliate = [];
 
