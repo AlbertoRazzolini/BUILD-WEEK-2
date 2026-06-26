@@ -117,6 +117,7 @@ const loadHome = async () => {
 };
 // 3 RENDER DELLE CARD: clona #tmpl-card per ogni track e popola img/titolo/artista
 const ROW_IDS = {
+  "Basata sui tuoi gusti": "row-ai",
   "Riprodotti di recente": "row-history",
   "I tuoi preferiti": "row-favourites",
   "Suggerimenti pop": "row-pop",
@@ -231,10 +232,23 @@ const renderRow = (rowTitle, tracks) => {
     container = list;
   }
 
-  // container.replaceChildren(...tracks.map(buildCard));
+  const nuoveCards = tracks.map((track) => buildCard(track, tracks));
 
-  // MODIFICA: Passa esplicitamente sia la traccia singola sia l'intero array 'tracks' della riga
-  container.replaceChildren(...tracks.map(track => buildCard(track, tracks)));
+  if (knownId === "row-ai") {
+    // accumula senza duplicati: stessa traccia può arrivare in chiamate successive
+    const idVisti = new Set(
+      Array.from(container.children)
+        .map((c) => c.dataset.id)
+        .filter(Boolean),
+    );
+    const cardUniche = [
+      ...Array.from(container.children),
+      ...nuoveCards.filter((c) => c.dataset.id && !idVisti.has(c.dataset.id)),
+    ];
+    container.replaceChildren(...cardUniche);
+  } else {
+    container.replaceChildren(...nuoveCards);
+  }
 };
 // appena digiti almeno 3 lettere, salva il termine e vai alla pagina di ricerca dedicata
 const goToSearch = (term) => {
