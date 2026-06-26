@@ -683,9 +683,6 @@ class Player {
       addToHistory(track);
     }
 
-    const footer = document.querySelector(".player");
-    if (footer) footer.classList.add("has-track");
-
     this.updateNowPlayingUI();
 
     const btnAI = document.getElementById("btn-genera-ai");

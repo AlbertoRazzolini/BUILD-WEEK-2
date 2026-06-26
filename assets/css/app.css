@@ -686,8 +686,8 @@ button {
   text-overflow: ellipsis;
   margin: 0;
 }
-.player.has-track .player-title:hover,
-.player.has-track .player-artist:hover {
+.player-title:hover,
+.player-artist:hover {
   text-decoration: underline;
 }
 
