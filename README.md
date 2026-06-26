@@ -17,6 +17,11 @@ Un'applicazione web per ascoltare anteprime musicali, gestire preferiti e playli
   - [Playlist](#playlist)
 - [Funzionalità](#funzionalità)
 - [Player](#player)
+- [Architettura del codice](#architettura-del-codice)
+  - [Classi modello](#classi-modello)
+  - [Classe Player](#classe-player)
+  - [Funzioni helper](#funzioni-helper)
+  - [LocalStorage helpers](#localstorage-helpers)
 - [Come avviare](#come-avviare)
 - [Team](#team)
 
@@ -61,6 +66,8 @@ BUILD-WEEK-2/
 │       └── playlist.js # Logica pagina Playlist
 └── README.md
 ```
+
+> Tutte le funzioni, classi e variabili principali dei file in `assets/js/` sono documentate con commenti **JSDoc** (`@param`, `@returns`, `@type`).
 
 ---
 
@@ -136,19 +143,38 @@ Gestisce sia i **preferiti** (`?id=favourites`) sia le **playlist personalizzate
 ## Funzionalità
 
 ### Preferiti
-Ogni brano ha un pulsante cuore che alterna tra pieno e vuoto. I preferiti sono salvati in `localStorage` e sincronizzati in tempo reale nella sidebar.
+Ogni brano ha un pulsante cuore che alterna tra pieno e vuoto in tempo reale. I preferiti sono salvati in `localStorage` e sincronizzati automaticamente nella sidebar senza ricaricare la pagina. Nella pagina album il cuore agisce sull'intero album: salva o rimuove tutte le tracce in un colpo solo.
 
 ### Playlist multiple
-Dal pulsante `+` su qualsiasi brano si apre un menu contestuale per aggiungere il brano a una playlist esistente o crearne una nuova al momento.
+Dal pulsante `+` su qualsiasi brano (card, riga tracklist, sidebar) si apre un menu contestuale che permette di:
+- Aggiungere il brano a una playlist esistente
+- Creare una nuova playlist al momento digitando il nome
+- Rimuovere il brano da una playlist con il pulsante `✕`
+
+Le playlist sono accessibili dalla sidebar e navigabili tramite la pagina dedicata `playlist.html`.
 
 ### Cronologia
-Gli ultimi 12 brani riprodotti vengono salvati automaticamente e mostrati nella riga "Riprodotti di recente" nella home.
+Gli ultimi 12 brani riprodotti vengono salvati automaticamente in `localStorage` e mostrati nella riga "Riprodotti di recente" nella home. La cronologia si aggiorna ad ogni play senza duplicati.
 
 ### Filtri sidebar
 Tre badge nella sidebar filtrano i preferiti per:
-- **Artisti** — raggruppa per artista
-- **Album** — raggruppa per album
-- **Generi** — filtra le card della home in base al genere selezionato
+- **Artisti** — mostra gli artisti dei brani preferiti, click riproduce tutte le tracce dell'artista
+- **Album** — mostra gli album dei brani preferiti, click naviga alla pagina album
+- **Generi** — mostra i generi presenti nei preferiti e filtra in tempo reale le card della home, nascondendo le sezioni senza corrispondenze
+
+Ricliccando lo stesso badge si torna alla visualizzazione normale.
+
+### Ricerca con debounce
+La barra di ricerca aspetta 400ms dopo l'ultima lettera digitata prima di inviare la richiesta, evitando chiamate API inutili. I risultati vengono cercati in parallelo su brani, album e artisti.
+
+### Drag to scroll
+Le righe di card nella home e la sidebar supportano il trascinamento con il mouse per scorrere orizzontalmente (righe) e verticalmente (sidebar), senza mostrare scrollbar.
+
+### Design responsive
+L'applicazione è ottimizzata per ogni dispositivo:
+- **Mobile** — topbar semplificata con hamburger menu, sidebar in offcanvas, altezza dinamica con `100dvh`
+- **Tablet** — layout a colonna unica con spaziature adattive
+- **Desktop** — layout a 3 zone (sidebar fissa + contenuto + footer player)
 
 ---
 
@@ -166,6 +192,123 @@ Il footer player è persistente su tutte le pagine.
 | 🔊 | Controllo volume con barra trascinabile |
 
 Titolo e artista nel footer sono link cliccabili verso la pagina album e la pagina artista. L'underline appare solo quando un brano è in riproduzione.
+
+---
+
+## Architettura del codice
+
+### Classi modello
+
+Le tre classi mappano i dati grezzi dell'API iTunes in oggetti strutturati usati in tutta l'app:
+
+```js
+class Track {
+  constructor(raw) {
+    this.id        = raw.trackId;
+    this.title     = raw.trackName;
+    this.artist    = raw.artistName;
+    this.album     = raw.collectionName;
+    this.albumId   = raw.collectionId;
+    this.artistId  = raw.artistId;
+    this.cover     = raw.artworkUrl100;
+    this.previewUrl = raw.previewUrl;
+    this.durationMs = raw.trackTimeMillis;
+    this.genre     = raw.primaryGenreName;
+  }
+}
+
+class Album {
+  constructor(raw) {
+    this.id         = raw.collectionId;
+    this.title      = raw.collectionName;
+    this.artist     = raw.artistName;
+    this.artistId   = raw.artistId;
+    this.cover      = raw.artworkUrl100;
+    this.trackCount = raw.trackCount;
+    this.releaseDate = raw.releaseDate;
+  }
+}
+
+class Artist {
+  constructor(raw) {
+    this.id    = raw.artistId;
+    this.name  = raw.artistName;
+    this.genre = raw.primaryGenreName;
+  }
+}
+```
+
+---
+
+### Classe Player
+
+Gestisce l'elemento `<audio>` e tutta la UI del footer. Viene istanziata una volta per pagina tramite `initPage()` e salvata in `window.player`.
+
+```js
+// Avvia la riproduzione di un brano, con tracklist opzionale per next/prev
+player.play(track, tracklist = [])
+
+// Play/pausa toggle
+player.togglePlay()
+
+// Navigazione
+player.next()
+player.prev()
+
+// Modalità
+player.toggleShuffle()   // ordine casuale
+player.toggleRepeat()    // loop singolo brano
+
+// Volume e seek
+player.setVolume(0.8)    // valore tra 0 e 1
+player.seek(0.5)         // salta al 50% del brano
+```
+
+La tracklist passata a `play()` viene usata da `next()` e `prev()` per navigare nell'elenco corretto (album, risultati di ricerca, preferiti, ecc.).
+
+---
+
+### Funzioni helper
+
+Disponibili globalmente da `common.js`:
+
+```js
+// Fetch con gestione errori — restituisce { results: [] } in caso di fallimento
+const data = await fetchJSON("https://itunes.apple.com/search?term=pop&entity=song");
+
+// Converte millisecondi in stringa "m:ss"
+formatTime(215000) // → "3:35"
+
+// Sostituisce la thumbnail 100x100 con la versione 600x600
+bigArt("https://...artwork/100x100bb.jpg") // → "https://...artwork/600x600bb.jpg"
+
+// Restituisce una funzione che esegue fn solo dopo ms millisecondi di pausa
+const debouncedSearch = debounce(doSearch, 400);
+```
+
+---
+
+### LocalStorage helpers
+
+Tutte le funzioni leggono e scrivono su `localStorage` in formato JSON:
+
+```js
+// Cronologia (max 12 brani)
+getHistory()           // → Track[]
+addToHistory(track)    // aggiunge in testa, rimuove duplicati
+
+// Preferiti
+getFavourites()        // → Track[]
+isFavourite(trackId)   // → boolean
+toggleFavourite(track) // aggiunge o rimuove
+
+// Playlist multiple
+getPlaylists()                        // → [{id, name, tracks}]
+getPlaylistById(id)                   // → playlist | null
+createPlaylist(name)                  // → nuova playlist vuota
+deletePlaylist(id)                    // rimuove la playlist
+toggleTrackInPlaylist(playlistId, track) // aggiunge o rimuove un brano
+```
 
 ---
 

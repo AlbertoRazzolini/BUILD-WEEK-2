@@ -1,60 +1,57 @@
-/* ============================================================
-   common.js — codice condiviso tra tutte le pagine
-   ============================================================
-
-   REGOLE GENERALI
-   - Solo const e let (mai var)
-   - DOM: querySelector / querySelectorAll
-   - Eventi: addEventListener (mai onclick inline)
-   - fetch + async/await + try/catch
-   - localStorage: setItem / getItem / removeItem (salva sempre stringhe)
-   - Pattern OOP: classi Track, Album, Artist, Player
-
-   COSA CONTIENE QUESTO FILE
-   1) Costanti (URL base API, chiavi localStorage)
-   2) Helpers (fetchJSON, formatTime, bigArt, debounce)
-   3) Classi modello: Track, Album, Artist
-   4) Classe Player (gestisce <audio>)
-   5) localStorage helpers (history, favourites)
-   6) Render sidebar e player footer
-   7) Inizializzazione al DOMContentLoaded
-
-   ESEMPIO USO DELL'ELEMENTO <audio>
-   --------------------------------
-     const audio = document.querySelector("#audio-element");
-     audio.src = "https://...preview.m4a"; // URL della preview MP3
-     audio.play();                         // avvia la riproduzione
-     audio.pause();                        // mette in pausa
-     audio.currentTime = 10;               // salta a 10 secondi
-     audio.duration;                       // durata in secondi
-     audio.volume = 0.5;                   // volume tra 0 e 1
-
-     audio.addEventListener("timeupdate", () => {
-       // chiamato continuamente durante la riproduzione
-       const percent = (audio.currentTime / audio.duration) * 100;
-     });
-
-     audio.addEventListener("ended", () => {
-       // brano finito
-     });
-
-   ESEMPIO USO DELL'API iTunes
-   ---------------------------
-     // Ricerca brani
-     fetch("https://itunes.apple.com/search?term=eminem&entity=song&limit=10")
-
-     // Ricerca album
-     fetch("https://itunes.apple.com/search?term=pink+floyd&entity=album&limit=10")
-
-     // Ricerca artisti
-     fetch("https://itunes.apple.com/search?term=jovanotti&entity=musicArtist&limit=5")
-
-     // Dettagli album (con tracce)
-     fetch("https://itunes.apple.com/lookup?id=1440831203&entity=song")
-
-     // Top tracks artista
-     fetch("https://itunes.apple.com/lookup?id=909253&entity=song&limit=10")
-*/
+/**
+ * @fileoverview common.js — codice condiviso tra tutte le pagine.
+ *
+ * REGOLE GENERALI
+ * - Solo const e let (mai var)
+ * - DOM: querySelector / querySelectorAll
+ * - Eventi: addEventListener (mai onclick inline)
+ * - fetch + async/await + try/catch
+ * - localStorage: setItem / getItem / removeItem (salva sempre stringhe)
+ * - Pattern OOP: classi Track, Album, Artist, Player
+ *
+ * COSA CONTIENE QUESTO FILE
+ * 1) Costanti (URL base API, chiavi localStorage)
+ * 2) Helpers (fetchJSON, formatTime, bigArt, debounce)
+ * 3) Classi modello: Track, Album, Artist
+ * 4) Classe Player (gestisce <audio>)
+ * 5) localStorage helpers (history, favourites)
+ * 6) Render sidebar e player footer
+ * 7) Inizializzazione al DOMContentLoaded
+ *
+ * @example <caption>Uso dell'elemento &lt;audio&gt;</caption>
+ * const audio = document.querySelector("#audio-element");
+ * audio.src = "https://...preview.m4a"; // URL della preview MP3
+ * audio.play();                         // avvia la riproduzione
+ * audio.pause();                        // mette in pausa
+ * audio.currentTime = 10;               // salta a 10 secondi
+ * audio.duration;                       // durata in secondi
+ * audio.volume = 0.5;                   // volume tra 0 e 1
+ *
+ * audio.addEventListener("timeupdate", () => {
+ *   // chiamato continuamente durante la riproduzione
+ *   const percent = (audio.currentTime / audio.duration) * 100;
+ * });
+ *
+ * audio.addEventListener("ended", () => {
+ *   // brano finito
+ * });
+ *
+ * @example <caption>Uso dell'API iTunes</caption>
+ * // Ricerca brani
+ * fetch("https://itunes.apple.com/search?term=eminem&entity=song&limit=10")
+ *
+ * // Ricerca album
+ * fetch("https://itunes.apple.com/search?term=pink+floyd&entity=album&limit=10")
+ *
+ * // Ricerca artisti
+ * fetch("https://itunes.apple.com/search?term=jovanotti&entity=musicArtist&limit=5")
+ *
+ * // Dettagli album (con tracce)
+ * fetch("https://itunes.apple.com/lookup?id=1440831203&entity=song")
+ *
+ * // Top tracks artista
+ * fetch("https://itunes.apple.com/lookup?id=909253&entity=song&limit=10")
+ */
 
 /* ============================ 1. Costanti ============================ */
 
@@ -71,14 +68,18 @@ const MAX_HISTORY = 12;
 
 /* ============================ 2. Helpers ============================ */
 
-/*
-  fetchJSONP(url)
-  - L'API iTunes Search non manda l'header CORS (Access-Control-Allow-Origin),
-    quindi fetch() viene sempre bloccato dal browser. L'API supporta però
-    il classico parametro JSONP "callback": carichiamo la risposta come
-    <script>, che non è soggetto a CORS, e risolviamo la Promise quando
-    Apple richiama la nostra funzione globale.
-*/
+/**
+ * Carica una URL via JSONP, bypassando il CORS.
+ *
+ * L'API iTunes Search non manda l'header CORS (Access-Control-Allow-Origin),
+ * quindi fetch() viene sempre bloccato dal browser. L'API supporta però
+ * il classico parametro JSONP "callback": carichiamo la risposta come
+ * <script>, che non è soggetto a CORS, e risolviamo la Promise quando
+ * Apple richiama la nostra funzione globale.
+ *
+ * @param {string} url - URL dell'endpoint iTunes (senza il parametro callback).
+ * @returns {Promise<Object>} Promise che risolve con il JSON ritornato dall'API.
+ */
 const fetchJSONP = (url) => {
   return new Promise((resolve, reject) => {
     const callbackName = `jsonp_cb_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
@@ -105,12 +106,14 @@ const fetchJSONP = (url) => {
   });
 };
 
-/*
-  fetchJSON(url)
-  - Fa una richiesta GET (via JSONP, vedi fetchJSONP) e ritorna i dati JSON
-  - Gestisce errori di rete con try/catch
-  - In caso di errore ritorna { results: [], resultCount: 0 } per semplificare i chiamanti
-*/
+/**
+ * Fa una richiesta GET (via JSONP, vedi {@link fetchJSONP}) e ritorna i dati JSON.
+ * Gestisce errori di rete con try/catch: in caso di errore ritorna
+ * `{ results: [], resultCount: 0 }` per semplificare i chiamanti.
+ *
+ * @param {string} url - URL dell'endpoint iTunes.
+ * @returns {Promise<Object>} Dati JSON ritornati dall'API, o un risultato vuoto in caso di errore.
+ */
 const fetchJSON = async (url) => {
   try {
     return await fetchJSONP(url);
@@ -120,21 +123,24 @@ const fetchJSON = async (url) => {
   return { results: [], resultCount: 0 };
 };
 
-/*
-  bigArt(url)
-  - L'API iTunes ritorna artwork 100x100 (artworkUrl100)
-  - Sostituisce "100x100bb" con "600x600bb" per avere una cover più grande
-*/
+/**
+ * Trasforma la cover 100x100 ritornata dall'API iTunes (artworkUrl100) in
+ * una cover 600x600 più grande, sostituendo "100x100" con "600x600" nell'URL.
+ *
+ * @param {string} url - URL dell'artwork (es. artworkUrl100).
+ * @returns {string} URL della cover ad alta risoluzione, o stringa vuota se `url` è falsy.
+ */
 const bigArt = (url) => {
   if (!url) return "";
   return url.replace("100x100", "600x600");
 };
 
-/*
-  formatTime(ms)
-  - Converte millisecondi in stringa "m:ss"
-  - Esempio: 65000 -> "1:05"
-*/
+/**
+ * Converte una durata in millisecondi nel formato "m:ss".
+ *
+ * @param {number} ms - Durata in millisecondi.
+ * @returns {string} Durata formattata, es. `65000` -> `"1:05"`. Ritorna `"0:00"` se `ms` è falsy.
+ */
 const formatTime = (ms) => {
   if (!ms) return "0:00";
   const totalSec = Math.floor(ms / 1000);
@@ -143,11 +149,14 @@ const formatTime = (ms) => {
   return `${min}:${String(sec).padStart(2, "0")}`;
 };
 
-/*
-  debounce(fn, ms)
-  - Restituisce una nuova funzione che chiama fn solo dopo "ms" millisecondi
-    di pausa rispetto all'ultima chiamata. Usata per la ricerca al type.
-*/
+/**
+ * Restituisce una nuova funzione che chiama `fn` solo dopo `ms` millisecondi
+ * di pausa rispetto all'ultima chiamata. Usata per la ricerca al type.
+ *
+ * @param {Function} fn - Funzione da invocare al termine della pausa.
+ * @param {number} ms - Millisecondi di inattività da attendere prima di invocare `fn`.
+ * @returns {Function} Funzione "debounced" che accetta gli stessi argomenti di `fn`.
+ */
 const debounce = (fn, ms) => {
   let timerId = null;
   return (...args) => {
@@ -166,7 +175,18 @@ const debounce = (fn, ms) => {
 let filtroAttivo = null;
 let filtroGenereAttivo = null; // genere selezionato nella lista — persiste tra re-render
 
-// costruisce e renderizza la lista dei generi dai preferiti attuali
+/** @type {?string} Filtro badge attualmente attivo: `"artisti"`, `"album"`, `"generi"` o `null`. */
+let filtroActivo = null;
+/** @type {?string} Genere selezionato nella lista filtro — persiste tra re-render. */
+let filtroGeneroActivo = null;
+
+/**
+ * Costruisce e renderizza, dentro `#sidebar-filter-results`, la lista dei
+ * generi musicali estratti dai preferiti salvati, e riapplica l'evidenziazione
+ * del genere eventualmente già attivo.
+ *
+ * @returns {void}
+ */
 const renderGenreFilter = () => {
   const mappaGeneri = new Map();
   getFavourites().forEach((track) => {
@@ -190,6 +210,14 @@ const renderGenreFilter = () => {
   }
 };
 
+/**
+ * Attiva i badge filtro della sidebar (`.badge.bg-secondary`): al click
+ * mostrano in `#sidebar-filter-results` artisti, album o generi ricavati
+ * dai preferiti salvati. Ricliccando il badge già attivo si torna alla
+ * vista normale (comportamento "toggle", un solo filtro attivo alla volta).
+ *
+ * @returns {void}
+ */
 const myFunction = () => {
   const myButtons = document.querySelectorAll(".badge.bg-secondary");
   if (myButtons.length === 0) return;
@@ -366,71 +394,111 @@ const renderRisultati = (lista, tipo) => {
 
 /* ============================ 3. Classi modello ============================ */
 
-/*
-  Classe Track
-  Modella un brano restituito dall'API iTunes (wrapperType === "track").
-  Campi utili dell'API: trackId, trackName, artistName, collectionName,
-  collectionId, artistId, artworkUrl100, previewUrl, trackTimeMillis.
-*/
-//skybidi
-//cosa prendere dall API per ogni singolo brano (chiamando con il this)
+/**
+ * Modella un brano restituito dall'API iTunes (wrapperType === "track").
+ * Campi utili dell'API: trackId, trackName, artistName, collectionName,
+ * collectionId, artistId, artworkUrl100, previewUrl, trackTimeMillis.
+ */
 class Track {
+  /**
+   * @param {Object} raw - Oggetto traccia grezzo restituito dall'API iTunes.
+   * @param {number} raw.trackId
+   * @param {string} raw.trackName
+   * @param {string} raw.artistName
+   * @param {string} raw.collectionName
+   * @param {number} raw.collectionId
+   * @param {number} raw.artistId
+   * @param {string} raw.artworkUrl100
+   * @param {string} raw.previewUrl
+   * @param {number} raw.trackTimeMillis
+   * @param {string} [raw.primaryGenreName]
+   */
   constructor(raw) {
-    this.id = raw.trackId; //ID
-    this.title = raw.trackName; //nome traccia
-    this.artist = raw.artistName; //nome artista
-    this.album = raw.collectionName; //nome album
-    this.albumId = raw.collectionId; //ID album
-    this.artistId = raw.artistId; //ID artista
-    this.cover = raw.artworkUrl100; //link immagine copertina
-    this.previewUrl = raw.previewUrl; //link streaming di 30 secondi
-    this.durationMs = raw.trackTimeMillis; //durata in millisecondi
-    this.genre = raw.primaryGenreName; //genere del brano (mi serve per il filtro Generi)
+    /** @type {number} ID del brano */
+    this.id = raw.trackId;
+    /** @type {string} Nome del brano */
+    this.title = raw.trackName;
+    /** @type {string} Nome dell'artista */
+    this.artist = raw.artistName;
+    /** @type {string} Nome dell'album */
+    this.album = raw.collectionName;
+    /** @type {number} ID dell'album */
+    this.albumId = raw.collectionId;
+    /** @type {number} ID dell'artista */
+    this.artistId = raw.artistId;
+    /** @type {string} Link immagine copertina (100x100) */
+    this.cover = raw.artworkUrl100;
+    /** @type {string} Link streaming di 30 secondi */
+    this.previewUrl = raw.previewUrl;
+    /** @type {number} Durata in millisecondi */
+    this.durationMs = raw.trackTimeMillis;
+    /** @type {string} Genere del brano (usato dal filtro Generi) */
+    this.genre = raw.primaryGenreName;
   }
 }
 
+/** Modella un album restituito dall'API iTunes (wrapperType === "collection"). */
 class Album {
+  /**
+   * @param {Object} raw - Oggetto album grezzo restituito dall'API iTunes.
+   * @param {number} raw.collectionId
+   * @param {string} raw.collectionName
+   * @param {string} raw.artistName
+   * @param {number} raw.artistId
+   * @param {string} raw.artworkUrl100
+   * @param {string} raw.releaseDate
+   * @param {number} raw.trackCount
+   */
   constructor(raw) {
-    this.id = raw.collectionId; //ID album
-    this.title = raw.collectionName; //nome album
-    this.artist = raw.artistName; //chi è l'artista
-    this.artistId = raw.artistId; //ID artista (per link pagina artista)
-    this.cover = raw.artworkUrl100; //cover album
-    this.releaseDate = raw.releaseDate; //data di uscita
-    this.trackCount = raw.trackCount; //numero di tracce incluse
+    /** @type {number} ID album */
+    this.id = raw.collectionId;
+    /** @type {string} Nome album */
+    this.title = raw.collectionName;
+    /** @type {string} Chi è l'artista */
+    this.artist = raw.artistName;
+    /** @type {number} ID artista (per link pagina artista) */
+    this.artistId = raw.artistId;
+    /** @type {string} Cover album */
+    this.cover = raw.artworkUrl100;
+    /** @type {string} Data di uscita */
+    this.releaseDate = raw.releaseDate;
+    /** @type {number} Numero di tracce incluse */
+    this.trackCount = raw.trackCount;
   }
 }
 
+/** Modella un artista restituito dall'API iTunes (wrapperType === "artist"). */
 class Artist {
+  /**
+   * @param {Object} raw - Oggetto artista grezzo restituito dall'API iTunes.
+   * @param {number} raw.artistId
+   * @param {string} raw.artistName
+   * @param {string} [raw.primaryGenreName]
+   */
   constructor(raw) {
-    this.id = raw.artistId; //ID artista
-    this.name = raw.artistName; //nome artista
-    this.genre = raw.primaryGenreName; //genere musicale di questa traccia
+    /** @type {number} ID artista */
+    this.id = raw.artistId;
+    /** @type {string} Nome artista */
+    this.name = raw.artistName;
+    /** @type {string} Genere musicale di questa traccia */
+    this.genre = raw.primaryGenreName;
   }
 }
 
 /* ============================ 4. Classe Player ============================ */
 
-/*
-  Classe Player
-  Gestisce la riproduzione audio e la UI del player footer.
-
-  Stato interno:
-    - currentTrack: Track corrente (null se nessun brano)
-    - isPlaying: true/false
-
-  Metodi pubblici:
-    - mount()        -> rende la UI del player nel footer (.player)
-    - play(track)    -> imposta currentTrack, src audio, avvia, salva in history
-    - togglePlay()   -> alterna play/pause sul brano corrente
-    - setVolume(v)   -> v tra 0 e 1
-    - seek(percent)  -> sposta currentTime a percent% della durata
-
-  Eventi audio da agganciare:
-    - "timeupdate" per aggiornare la progress bar
-    - "ended" per fermarsi a fine brano
-*/
+/**
+ * Gestisce la riproduzione audio e la UI del player footer.
+ *
+ * Eventi audio agganciati internamente:
+ * - `"timeupdate"` per aggiornare la progress bar
+ * - `"ended"` per passare al brano successivo o fermarsi a fine brano
+ */
 class Player {
+  /**
+   * Recupera il tag `<audio>` (`#audio-element`), inizializza lo stato di
+   * riproduzione e ripristina shuffle/repeat da localStorage.
+   */
   constructor() {
     this.audio = document.querySelector("#audio-element"); //recupera tag audio a riga circa 225
     this.currentTrack = null; //brano iniziale : nessuno
@@ -488,7 +556,14 @@ class Player {
       }
     });
   }
-  //TUTTO L'HTML CHE CI SERVE NEL NOSTRO PLAYER/FOOTER
+  /**
+   * Costruisce e inserisce tutta l'interfaccia del player (cover, titolo,
+   * controlli, barra di progresso, volume) dentro `.player` nel footer,
+   * e collega i listener di interazione (play/pause, seek, volume, mute,
+   * shuffle, repeat, prev/next).
+   *
+   * @returns {void}
+   */
   mount() {
     const footer = document.querySelector(".player");
     if (!footer) return;
@@ -659,7 +734,14 @@ class Player {
     btnShuffle.addEventListener("click", () => this.toggleShuffle());
     btnRepeat.addEventListener("click", () => this.toggleRepeat());
   }
-  //ricevi il track di Apple e riproducilo; tracklist opzionale per next/prev
+  /**
+   * Riproduce un brano: imposta `currentTrack`, l'src dell'audio, avvia la
+   * riproduzione, aggiorna la UI del footer e salva il brano nello storico.
+   *
+   * @param {Track} track - Brano da riprodurre (deve avere `previewUrl`).
+   * @param {Track[]} [tracklist=[]] - Tracklist da usare per `next()`/`prev()` (es. l'album corrente).
+   * @returns {void}
+   */
   play(track, tracklist = []) {
     if (!track || !track.previewUrl) return;
     this.currentTrack = track;
@@ -706,7 +788,11 @@ class Player {
       ottieniSuggerimentiAI(this.currentTrack, btnAI);
     }
   }
-  //comportamento del toggle delbottone play /pause
+  /**
+   * Alterna play/pausa sul brano corrente. Non fa nulla se nessun brano è caricato.
+   *
+   * @returns {void}
+   */
   togglePlay() {
     // Se non c'è nessuna canzone caricata, non fa nulla
     if (!this.currentTrack) return;
@@ -724,8 +810,15 @@ class Player {
     this.updateNowPlayingUI();
   }
 
-  // .card-play può contenere testo semplice (search.js) o un <ion-icon> (card clonate da #tmpl-card in home.js):
-  // gestisce entrambi i casi invece di sovrascrivere sempre con textContent
+  /**
+   * Aggiorna l'icona di un bottone `.card-play`. Gestisce sia il caso in cui
+   * contiene testo semplice (search.js) sia il caso `<ion-icon>` (card clonate
+   * da `#tmpl-card` in home.js), invece di sovrascrivere sempre con `textContent`.
+   *
+   * @param {Element} btnPlay - Bottone `.card-play` da aggiornare.
+   * @param {boolean} isPlaying - Se true mostra l'icona di pausa, altrimenti quella di play.
+   * @returns {void}
+   */
   setCardPlayIcon(btnPlay, isPlaying) {
     const icon = btnPlay.querySelector("ion-icon");
     if (icon) {
@@ -735,8 +828,13 @@ class Player {
     }
   }
 
-  // evidenzia in verde la riga/card del brano corrente e mostra ▶/⏸ su tutte le sue card
-  // (querySelectorAll anche per le card: lo stesso brano può comparire in più righe della Home)
+  /**
+   * Evidenzia in verde la riga/card del brano corrente e mostra ▶/⏸ su tutte
+   * le sue card (usa `querySelectorAll` perché lo stesso brano può comparire
+   * in più righe della Home).
+   *
+   * @returns {void}
+   */
   updateNowPlayingUI() {
     document.querySelectorAll(".track-row.is-playing").forEach((el) => {
       el.classList.remove("is-playing");
@@ -759,7 +857,13 @@ class Player {
         this.setCardPlayIcon(btnPlay, this.isPlaying);
       });
   }
-  //regola volume sempre tran 0 e 1
+  /**
+   * Imposta il volume dell'audio, aggiorna la UI (barra volume, icona mute)
+   * e lo salva in localStorage.
+   *
+   * @param {number} v - Volume tra 0 e 1.
+   * @returns {void}
+   */
   setVolume(v) {
     if (!this.audio) return;
     this.audio.volume = v;
@@ -776,7 +880,11 @@ class Player {
     localStorage.setItem(STORAGE_KEY_VOLUME, v.toString());
   }
 
-  //silenzia il volume salvando il valore precedente, o lo ripristina se già muto
+  /**
+   * Silenzia il volume salvando il valore precedente, o lo ripristina se già muto.
+   *
+   * @returns {void}
+   */
   toggleMute() {
     if (!this.audio) return;
     if (this.audio.volume > 0) {
@@ -787,11 +895,23 @@ class Player {
     }
   }
 
+  /**
+   * Sposta `currentTime` alla percentuale indicata della durata del brano.
+   *
+   * @param {number} percent - Percentuale (0-1) della durata totale.
+   * @returns {void}
+   */
   seek(percent) {
     if (!this.audio || !this.audio.duration) return;
     this.audio.currentTime = percent * this.audio.duration;
   }
 
+  /**
+   * Attiva/disattiva lo shuffle, salva lo stato in localStorage e aggiorna
+   * il colore del bottone. Se attivato, inizializza la pool di shuffle.
+   *
+   * @returns {void}
+   */
   toggleShuffle() {
     this.isShuffle = !this.isShuffle;
     localStorage.setItem(STORAGE_KEY_SHUFFLE, this.isShuffle.toString());
@@ -800,6 +920,12 @@ class Player {
     if (this.isShuffle) this.initShufflePool();
   }
 
+  /**
+   * Attiva/disattiva la ripetizione del brano corrente (`audio.loop`), salva
+   * lo stato in localStorage e aggiorna il colore del bottone.
+   *
+   * @returns {void}
+   */
   toggleRepeat() {
     this.isRepeat = !this.isRepeat;
     localStorage.setItem(STORAGE_KEY_REPEAT, this.isRepeat.toString());
@@ -812,12 +938,26 @@ class Player {
     }
   }
 
+  /**
+   * Ricostruisce la pool di ID usata da {@link Player#next} in modalità
+   * shuffle, escludendo il brano corrente.
+   *
+   * @returns {void}
+   */
   initShufflePool() {
     this.shufflePool = this.currentTracklist
       .map((t) => t.id)
       .filter((id) => id !== (this.currentTrack ? this.currentTrack.id : null));
   }
 
+  /**
+   * Passa al brano successivo nella tracklist corrente. In modalità shuffle
+   * pesca (senza ripetizioni) dalla shuffle pool, rigenerandola se vuota;
+   * altrimenti avanza in ordine. Se la tracklist ha un solo brano, riavvia
+   * semplicemente da capo.
+   *
+   * @returns {void}
+   */
   next() {
     if (this.currentTracklist.length <= 1) {
       this.seek(0);
@@ -847,6 +987,13 @@ class Player {
     }
   }
 
+  /**
+   * Torna al brano precedente nella tracklist corrente. Se sono già passati
+   * più di 3 secondi di riproduzione (o la tracklist ha un solo brano),
+   * riavvia il brano corrente invece di tornare indietro.
+   *
+   * @returns {void}
+   */
   prev() {
     if (this.currentTracklist.length <= 1 || this.audio.currentTime > 3) {
       this.seek(0);
@@ -864,19 +1011,23 @@ class Player {
 
 /* ============================ 5. localStorage helpers ============================ */
 
-/*
-  getHistory() -> array di Track (al più MAX_HISTORY)
-  addToHistory(track) -> aggiunge in testa, rimuove duplicati, taglia a MAX_HISTORY
-  getFavourites() -> array di Track
-  isFavourite(trackId) -> bool
-  toggleFavourite(track) -> aggiunge o rimuove
-*/
-
+/**
+ * Legge lo storico di riproduzione da localStorage.
+ *
+ * @returns {Track[]} Array di brani, al più {@link MAX_HISTORY} elementi.
+ */
 const getHistory = () => {
   const historyData = localStorage.getItem(STORAGE_KEY_HISTORY);
   return historyData ? JSON.parse(historyData) : [];
 };
 
+/**
+ * Aggiunge un brano in testa allo storico, rimuovendo eventuali duplicati
+ * (stesso id) e tagliando l'array a {@link MAX_HISTORY} elementi.
+ *
+ * @param {Track} track - Brano da aggiungere allo storico.
+ * @returns {void}
+ */
 const addToHistory = (track) => {
   let history = getHistory();
 
@@ -890,16 +1041,34 @@ const addToHistory = (track) => {
 
   localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(history));
 };
-// TODO: come getHistory ma con STORAGE_KEY_FAVOURITES
+
+/**
+ * Legge i brani preferiti da localStorage.
+ *
+ * @returns {Track[]} Array di brani preferiti.
+ */
 const getFavourites = () => {
   const favouritesData = localStorage.getItem(STORAGE_KEY_FAVOURITES);
   return favouritesData ? JSON.parse(favouritesData) : [];
 };
-// TODO: return getFavourites().some(t => t.id === trackId)
+
+/**
+ * Verifica se un brano è tra i preferiti.
+ *
+ * @param {number} trackId - ID del brano da verificare.
+ * @returns {boolean} True se il brano è tra i preferiti.
+ */
 const isFavourite = (trackId) => {
   return getFavourites().some((t) => t.id === trackId);
 };
-// TODO: se presente per id -> rimuovi; altrimenti aggiungi in testa; salva
+
+/**
+ * Aggiunge o rimuove un brano dai preferiti (toggle), salva il risultato in
+ * localStorage e aggiorna la sidebar (e il filtro generi, se attivo).
+ *
+ * @param {Track} track - Brano da aggiungere o rimuovere.
+ * @returns {void}
+ */
 const toggleFavourite = (track) => {
   let favourites = getFavourites();
   const exists = favourites.some((t) => t.id === track.id);
@@ -918,17 +1087,35 @@ const toggleFavourite = (track) => {
 };
 
 // Helper playlist — stessa struttura dei preferiti.
-// Lucio usa getPlaylist() per costruire i container "La tua playlist".
-// Il bottone di aggiunta è implementato da Lucio; questi helper sono condivisi.
+// Usato per costruire i container "La tua playlist" (vecchia playlist singola,
+// vedi migrazione in migrateOldPlaylist).
+
+/**
+ * Legge la (vecchia) playlist singola da localStorage.
+ *
+ * @returns {Track[]} Array di brani nella playlist.
+ */
 const getPlaylist = () => {
   const data = localStorage.getItem(STORAGE_KEY_PLAYLIST);
   return data ? JSON.parse(data) : [];
 };
 
+/**
+ * Verifica se un brano è nella (vecchia) playlist singola.
+ *
+ * @param {number} trackId - ID del brano da verificare.
+ * @returns {boolean} True se il brano è nella playlist.
+ */
 const isInPlaylist = (trackId) => {
   return getPlaylist().some((t) => t.id === trackId);
 };
 
+/**
+ * Aggiunge o rimuove un brano dalla (vecchia) playlist singola.
+ *
+ * @param {Track} track - Brano da aggiungere o rimuovere.
+ * @returns {void}
+ */
 const togglePlaylist = (track) => {
   let playlist = getPlaylist();
   const exists = playlist.some((t) => t.id === track.id);
@@ -942,26 +1129,48 @@ const togglePlaylist = (track) => {
 
 /* ============================ 5.5 Playlist multiple ============================ */
 
-// ID speciale che identifica la sezione "Brani che ti piacciono" (i preferiti come playlist)
+/** @type {string} ID speciale che identifica la sezione "Brani che ti piacciono" (i preferiti come playlist). */
 const PLAYLIST_FAVOURITES = "favourites";
 
-// Restituisce tutte le playlist salvate: [{id, name, tracks}]
+/**
+ * Legge tutte le playlist salvate.
+ *
+ * @returns {Array<{id: string, name: string, tracks: Track[]}>} Array delle playlist.
+ */
 const getPlaylists = () => {
   const data = localStorage.getItem(STORAGE_KEY_PLAYLISTS);
   return data ? JSON.parse(data) : [];
 };
 
+/**
+ * Cerca una playlist per ID.
+ *
+ * @param {string} id - ID della playlist.
+ * @returns {?{id: string, name: string, tracks: Track[]}} La playlist trovata, o `null`.
+ */
 const getPlaylistById = (id) => {
   return getPlaylists().find((p) => p.id === id) || null;
 };
 
+/**
+ * Elimina una playlist per ID e aggiorna la sidebar.
+ *
+ * @param {string} id - ID della playlist da eliminare.
+ * @returns {void}
+ */
 const deletePlaylist = (id) => {
   const updated = getPlaylists().filter((p) => p.id !== id);
   localStorage.setItem(STORAGE_KEY_PLAYLISTS, JSON.stringify(updated));
   renderSidebarPlaylists();
 };
 
-// Aggiunge o rimuove un brano da una playlist specifica
+/**
+ * Aggiunge o rimuove (toggle) un brano da una playlist specifica.
+ *
+ * @param {string} playlistId - ID della playlist target.
+ * @param {Track} track - Brano da aggiungere o rimuovere.
+ * @returns {void}
+ */
 const toggleTrackInPlaylist = (playlistId, track) => {
   const playlists = getPlaylists();
   const pl = playlists.find((p) => p.id === playlistId);
@@ -976,7 +1185,13 @@ const toggleTrackInPlaylist = (playlistId, track) => {
   renderSidebarPlaylists();
 };
 
-// Crea una nuova playlist vuota con ID univoco basato sul timestamp
+/**
+ * Crea una nuova playlist vuota con ID univoco basato sul timestamp,
+ * la salva e aggiorna la sidebar.
+ *
+ * @param {string} name - Nome della nuova playlist.
+ * @returns {{id: string, name: string, tracks: Track[]}} La playlist appena creata.
+ */
 const createPlaylist = (name) => {
   const playlists = getPlaylists();
   const newPlaylist = { id: `pl_${Date.now()}`, name, tracks: [] };
@@ -986,7 +1201,13 @@ const createPlaylist = (name) => {
   return newPlaylist;
 };
 
-// Migra i brani della vecchia chiave singola alle playlist multiple (eseguita una sola volta)
+/**
+ * Migra i brani della vecchia chiave singola ({@link STORAGE_KEY_PLAYLIST})
+ * alle playlist multiple, eseguita una sola volta (idempotente: salta se la
+ * playlist `"migrated"` esiste già).
+ *
+ * @returns {void}
+ */
 const migrateOldPlaylist = () => {
   const old = localStorage.getItem(STORAGE_KEY_PLAYLIST);
   if (!old) return;
@@ -1001,7 +1222,16 @@ const migrateOldPlaylist = () => {
 };
 
 // Menu a tendina "aggiungi a playlist" (.pl-menu, già stilizzato in app.css) — solo uno aperto alla volta
+
+/** @type {?Element} Riferimento al menu "aggiungi a playlist" attualmente aperto, o `null`. */
 let openPlMenu = null;
+
+/**
+ * Chiude (rimuove dal DOM) il menu "aggiungi a playlist" attualmente aperto,
+ * se presente, e rimuove i listener associati.
+ *
+ * @returns {void}
+ */
 const closePlMenu = () => {
   if (!openPlMenu) return;
   openPlMenu.remove();
@@ -1010,6 +1240,14 @@ const closePlMenu = () => {
   document.removeEventListener("scroll", closePlMenu, { capture: true });
 };
 
+/**
+ * Costruisce il menu a tendina "aggiungi a playlist" per un brano: elenca le
+ * playlist esistenti (click per aggiungere/rimuovere il brano) e una voce
+ * "+ Crea nuova playlist" che si trasforma in un campo di testo al click.
+ *
+ * @param {Track} track - Brano da aggiungere/rimuovere dalle playlist.
+ * @returns {Element} Elemento `.pl-menu` pronto per essere inserito nel DOM.
+ */
 const buildPlMenu = (track) => {
   const menu = document.createElement("div");
   menu.className = "pl-menu";
@@ -1067,7 +1305,14 @@ const buildPlMenu = (track) => {
   return menu;
 };
 
-// Bottone "+" per aggiungere un brano a una playlist — classe CSS passata come parametro
+/**
+ * Crea un bottone "+" che, al click, apre il menu {@link buildPlMenu} per
+ * aggiungere il brano a una playlist, posizionandolo sotto il bottone stesso.
+ *
+ * @param {Track} track - Brano da aggiungere a una playlist.
+ * @param {string} className - Classe CSS da applicare al bottone.
+ * @returns {Element} Elemento `<button>` pronto per essere inserito nel DOM.
+ */
 const makeAddButton = (track, className) => {
   const btn = document.createElement("button");
   btn.className = className;
@@ -1099,12 +1344,13 @@ const makeAddButton = (track, className) => {
 
 /* ============================ 6. Render sidebar ============================ */
 
-/*
-  renderSidebarFavourites()
-  - Popola #sidebar-favs-list (desktop) e #mobile-favs-list (offcanvas mobile)
-    clonando #tmpl-fav-item per ciascun preferito.
-  - Se non ci sono preferiti, mostra il placeholder "Nessuno ancora".
-*/
+/**
+ * Popola `#sidebar-favs-list` (desktop) e `#mobile-favs-list` (offcanvas
+ * mobile) clonando `#tmpl-fav-item` per ciascun preferito. Se non ci sono
+ * preferiti, mostra il placeholder "Nessuno ancora".
+ *
+ * @returns {void}
+ */
 const renderSidebarFavourites = () => {
   const tmplFav = document.getElementById("tmpl-fav-item");
   const lists = document.querySelectorAll(
@@ -1147,7 +1393,12 @@ const renderSidebarFavourites = () => {
   });
 };
 
-// Popola #sidebar-playlists-list e #mobile-playlists-list con le playlist dell'utente
+/**
+ * Popola `#sidebar-playlists-list` e `#mobile-playlists-list` con le playlist
+ * dell'utente, includendo sempre in testa la voce speciale "Brani che ti piacciono".
+ *
+ * @returns {void}
+ */
 const renderSidebarPlaylists = () => {
   const tmplPlaylist = document.getElementById("tmpl-playlist-item");
   const lists = document.querySelectorAll(
@@ -1218,14 +1469,19 @@ const renderSidebar = (activePage) => {
 */
 /* ============================ 7. Inizializzazione ============================ */
 
-/*
-  initPage()
-  - Chiamata da home.js / search.js / album.js / artist.js / playlist.js
-  - Monta il player nel footer e lo restituisce per essere usato.
-  - In origine accettava un parametro activePage per la vecchia renderSidebar()
-    (sotto, commentata) che evidenziava il link attivo. Da quando la sidebar
-    e' statica in HTML, activePage non serviva piu' a nulla: rimosso.
-*/
+/**
+ * Inizializza la pagina: chiamata da home.js / search.js / album.js /
+ * artist.js / playlist.js. Monta il player nel footer, migra la vecchia
+ * playlist singola, renderizza preferiti e playlist in sidebar, attiva i
+ * badge filtro e il drag-to-scroll verticale della sidebar.
+ *
+ * In origine accettava un parametro `activePage` per la vecchia
+ * `renderSidebar()` (sopra, commentata) che evidenziava il link attivo. Da
+ * quando la sidebar è statica in HTML, `activePage` non serviva più a nulla
+ * ed è stato rimosso.
+ *
+ * @returns {Player} L'istanza del player montata (esposta anche su `window.player`).
+ */
 const initPage = () => {
   const player = new Player();
   player.mount();

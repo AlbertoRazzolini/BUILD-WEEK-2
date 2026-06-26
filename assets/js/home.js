@@ -1,21 +1,15 @@
-/* ============================================================
-   home.js — costruzione della Home
-   ============================================================
-
-   COSA DEVI FARE
-   1) initPage("home")  // monta sidebar + player
-   2) Costruisci queste righe (sezioni) nella .home:
-        - "Riprodotti di recente" (da getHistory())  -- mostra solo se non vuota
-        - "I tuoi preferiti"       (da getFavourites()) -- mostra solo se non vuota
-        - "Suggerimenti pop"       (fetch search term=pop entity=song limit=25)
-        - "Suggerimenti rock"      (fetch search term=rock entity=song limit=25)
-        - "Suggerimenti hits"   (fetch search term=hits pop entity=song limit=25)
-   3) Le tre fetch dei suggerimenti vanno in PARALLELO con Promise.all
-   4) Ogni card è una Track: cover, titolo, artista, button play, button cuore (favourite)
-   5) Click card (cover inclusa) -> window.player.play(track)
-      Niente link ad album.html qui: in questa pagina ogni card è un brano,
-      non un album.
-*/
+/**
+ * @fileoverview home.js — costruzione della Home.
+ *
+ * Costruisce nella `.home` le righe (sezioni):
+ * - "Riprodotti di recente" (da `getHistory()`) — mostrata solo se non vuota
+ * - "I tuoi preferiti" (da `getFavourites()`) — mostrata solo se non vuota
+ * - "Suggerimenti pop" / "rock" / "hits" (fetch all'API iTunes, in parallelo con `Promise.all`)
+ *
+ * Ogni card è una {@link Track}: cover, titolo, artista, bottone play,
+ * bottone cuore (favourite). Click sulla card (cover inclusa) -> `window.player.play(track)`.
+ * Niente link ad album.html qui: in questa pagina ogni card è un brano, non un album.
+ */
 
 const player = initPage();
 const home = document.querySelector(".home");
@@ -46,6 +40,15 @@ const API_URL = "https://itunes.apple.com/search";
       previewUrl: track.previewUrl,
       albumId: track.collectionId,
     }));*/
+/**
+ * Cerca brani sull'API iTunes per un termine, filtrando opzionalmente per
+ * genere e limitando opzionalmente la ricerca a un paese.
+ *
+ * @param {string} term - Termine di ricerca.
+ * @param {(string|string[])} [genre] - Genere (o generi) da cui filtrare i risultati (case-insensitive, match parziale su `primaryGenreName`).
+ * @param {string} [country] - Codice paese (es. `"IT"`) da passare all'API.
+ * @returns {Promise<Track[]>} Al più 25 brani che soddisfano il filtro, o array vuoto in caso di errore.
+ */
 const fetchTracksByTerm = async (term, genre, country) => {
   try {
     const countryParam = country ? `&country=${country}` : "";
@@ -69,6 +72,8 @@ const fetchTracksByTerm = async (term, genre, country) => {
 };
 
 // 2 FUNZIONE HOME fai un loadhgome ad ogni avvio di pagina
+
+/** @type {string[]} ID delle sezioni `<section>` di righe della Home, da nascondere finché non hanno dati. */
 const ROW_SECTION_IDS = [
   "row-history",
   "row-favourites",
@@ -77,6 +82,13 @@ const ROW_SECTION_IDS = [
   "row-hits",
 ];
 
+/**
+ * Carica e renderizza tutte le righe della Home: storico e preferiti
+ * (da localStorage), poi i tre suggerimenti pop/rock/hits in parallelo via
+ * `Promise.all`. In caso di errore critico mostra un messaggio al posto della home.
+ *
+ * @returns {Promise<void>}
+ */
 const loadHome = async () => {
   try {
     // tutte le sezioni partono nascoste, renderRow le mostra solo se ha dati
@@ -115,6 +127,8 @@ const loadHome = async () => {
   }
 };
 // 3 RENDER DELLE CARD: clona #tmpl-card per ogni track e popola img/titolo/artista
+
+/** @type {Object<string, string>} Mappa titolo riga -> ID della `<section>` statica corrispondente in HTML. */
 const ROW_IDS = {
   "Basata sui tuoi gusti": "row-ai",
   "Riprodotti di recente": "row-history",
@@ -161,9 +175,19 @@ const tmplCard = document.getElementById("tmpl-card");
 }; 
 */
 
-// CARD DEI CONSIGLIATI PER POTER SENTIRE PIU' TRACCE SUI CONSIGLIA (Marco)
+// CARD DEI CONSIGLIATI PER POTER SENTIRE PIU' TRACCE SUI CONSIGLIA
 
-const buildCard = (track, currentTracklist = []) => { // <-- MODIFICA: Accetta l'array della riga
+/**
+ * Clona `#tmpl-card` e la popola con i dati di un brano: cover, titolo,
+ * artista (link ad artist.html), bottone preferito, bottone "+" playlist e
+ * bottone/click di play. Il click su play/card passa l'intera tracklist
+ * della riga al player, per abilitare next/prev sull'intera riga.
+ *
+ * @param {Track} track - Brano da mostrare nella card.
+ * @param {Track[]} [currentTracklist=[]] - Tracklist della riga, passata a `window.player.play()` per next/prev.
+ * @returns {Element} Elemento `.card` pronto per essere inserito nel DOM.
+ */
+const buildCard = (track, currentTracklist = []) => {
   const card = tmplCard.content.firstElementChild.cloneNode(true);
   card.dataset.id = track.id;    // serve a Player.updateNowPlayingUI() per evidenziare la card in riproduzione
   card.dataset.genre = (track.genre || "").toLowerCase(); // serve al filtro generi della sidebar
@@ -206,6 +230,15 @@ const buildCard = (track, currentTracklist = []) => { // <-- MODIFICA: Accetta l
   return card;
 };
 
+/**
+ * Renderizza una riga di card nella Home: usa la `<section>` statica
+ * corrispondente se `rowTitle` è in {@link ROW_IDS}, altrimenti ne crea una
+ * nuova in coda alla `.home`.
+ *
+ * @param {string} rowTitle - Titolo della riga (chiave di {@link ROW_IDS} per le righe statiche).
+ * @param {Track[]} tracks - Brani da mostrare nella riga.
+ * @returns {void}
+ */
 const renderRow = (rowTitle, tracks) => {
   const knownId = ROW_IDS[rowTitle];
   let container;
@@ -253,13 +286,20 @@ const renderRow = (rowTitle, tracks) => {
     container.replaceChildren(...nuoveCards);
   }
 };
-// appena digiti almeno 3 lettere, salva il termine e vai alla pagina di ricerca dedicata
+/**
+ * Salva il termine digitato e naviga alla pagina di ricerca dedicata.
+ * Chiamata in modo "debounced" (vedi {@link debouncedGoToSearch}) mentre si digita.
+ *
+ * @param {string} term - Termine di ricerca da salvare.
+ * @returns {void}
+ */
 const goToSearch = (term) => {
   if (term.length >= 1) {
     localStorage.setItem(STORAGE_KEY_LAST_SEARCH, term);
     window.location.href = "search.html";
   }
 };
+/** @type {Function} Versione "debounced" (400ms) di {@link goToSearch}. */
 const debouncedGoToSearch = debounce(goToSearch, 400);
 
 if (searchInput) {
@@ -268,8 +308,14 @@ if (searchInput) {
   });
 }
 
-// attacca i listener ai bottoni < > di ogni .row-scroller già presenti nell'HTML
-// chiamata prima di loadHome così i listener sono pronti quando le card vengono inserite
+/**
+ * Attacca i listener ai bottoni `<` `>` di ogni `.row-scroller` già presente
+ * nell'HTML (scroll orizzontale di una card alla volta) e abilita il
+ * drag-to-scroll orizzontale tenendo premuto e trascinando. Chiamata prima
+ * di `loadHome()` così i listener sono pronti quando le card vengono inserite.
+ *
+ * @returns {void}
+ */
 const initRowNav = () => {
   document.querySelectorAll(".row-scroller").forEach((scroller) => {
     const list = scroller.querySelector(".d-flex");

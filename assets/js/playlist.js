@@ -1,11 +1,12 @@
-/* ============================================================
-   playlist.js — la pagina di una playlist (l'ho fatta io, Lucio)
-   ============================================================
-
-   Qui leggo l'id dalla URL: se è "favourites" mostro i preferiti, altrimenti
-   è una mia playlist e prendo i suoi brani. Poi disegno l'intestazione (hero)
-   con Play (e il cestino per cancellarla) e la lista dei brani sotto.
-*/
+/**
+ * @fileoverview playlist.js — pagina di dettaglio di una playlist.
+ *
+ * Legge l'id dalla query string: se è {@link PLAYLIST_FAVOURITES}
+ * ("favourites") mostra i preferiti, altrimenti recupera la playlist
+ * corrispondente e i suoi brani. Disegna l'intestazione (hero) con bottone
+ * Play (e cestino per eliminarla, solo sulle playlist non-preferiti) e la
+ * lista dei brani sotto.
+ */
 
 const player = initPage();
 
@@ -26,6 +27,11 @@ if (searchInput) {
   });
 }
 
+/**
+ * Mostra il messaggio "Playlist non trovata" al posto dell'hero e svuota la tracklist.
+ *
+ * @returns {void}
+ */
 const showNotFound = () => {
   const msg = document.createElement("p");
   msg.textContent = "Playlist non trovata";
@@ -33,6 +39,18 @@ const showNotFound = () => {
   tracklist.replaceChildren();
 };
 
+/**
+ * Costruisce `#playlist-hero`: cover (del primo brano, o icona 🎵 se vuota),
+ * kicker "PLAYLIST", titolo, sotto-riga (numero brani · durata totale),
+ * bottone Play (disabilitato se vuota) e, solo per le playlist non-preferiti,
+ * un bottone cestino che elimina la playlist e torna alla home.
+ *
+ * @param {string} title - Titolo da mostrare (nome playlist o "Brani che ti piacciono").
+ * @param {Track[]} tracks - Brani della playlist.
+ * @param {string} playlistId - ID della playlist (o {@link PLAYLIST_FAVOURITES}).
+ * @param {boolean} isFavourites - True se questa è la playlist speciale dei preferiti.
+ * @returns {void}
+ */
 const renderHero = (title, tracks, playlistId, isFavourites) => {
   const totalMs = tracks.reduce((sum, t) => sum + (t.durationMs || 0), 0);
 
@@ -103,6 +121,19 @@ const renderHero = (title, tracks, playlistId, isFavourites) => {
   playlistHero.replaceChildren(cover, meta);
 };
 
+/**
+ * Costruisce `#tracklist`: se vuota mostra un messaggio placeholder
+ * (diverso per preferiti/playlist), altrimenti una riga per brano con
+ * numero, titolo, durata, bottone preferito e un bottone azione che varia
+ * per contesto — "+" per aprire il menu playlist sui preferiti, "✕" per
+ * rimuovere il brano sulle playlist normali. Click sulla riga -> `player.play(track, tracks)`.
+ *
+ * @param {Track[]} tracks - Brani della playlist da renderizzare.
+ * @param {string} playlistId - ID della playlist (o {@link PLAYLIST_FAVOURITES}).
+ * @param {boolean} isFavourites - True se questa è la playlist speciale dei preferiti.
+ * @param {Function} render - Callback per ridisegnare la pagina dopo una modifica (preferito o rimozione).
+ * @returns {void}
+ */
 const renderTracklist = (tracks, playlistId, isFavourites, render) => {
   if (tracks.length === 0) {
     const empty = document.createElement("p");
@@ -170,6 +201,14 @@ const renderTracklist = (tracks, playlistId, isFavourites, render) => {
   tracklist.replaceChildren(...rows);
 };
 
+/**
+ * Legge l'id playlist dalla query string e renderizza hero + tracklist.
+ * Definisce internamente `render()`, che rilegge i dati aggiornati da
+ * localStorage e ridisegna tutta la pagina — passata a {@link renderTracklist}
+ * per riapplicarsi dopo un toggle preferito/rimozione brano.
+ *
+ * @returns {void}
+ */
 const loadPlaylist = () => {
   const id = new URLSearchParams(window.location.search).get("id");
 
