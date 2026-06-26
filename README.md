@@ -197,6 +197,50 @@ Titolo e artista nel footer sono link cliccabili verso la pagina album e la pagi
 
 ## Architettura del codice
 
+### Pattern template + cloneNode (approccio ibrido Bootstrap)
+
+Per costruire le card dinamicamente senza usare `innerHTML`, l'app usa un pattern ibrido: il markup di una card è definito una sola volta in HTML dentro un tag `<template>`, poi viene clonato via JavaScript ogni volta che serve.
+
+```html
+<!-- index.html — il template non viene renderizzato dal browser -->
+<template id="tmpl-card">
+  <div class="card">
+    <div class="card-image-wrap">
+      <img alt="">
+      <button class="card-play" aria-label="Play">
+        <ion-icon name="play-outline"></ion-icon>
+      </button>
+      <button class="card-fav" aria-label="Preferito">
+        <ion-icon name="heart-outline"></ion-icon>
+      </button>
+    </div>
+    <p class="card-title"></p>
+    <a class="card-sub" href="#"></a>
+  </div>
+</template>
+```
+
+```js
+// home.js — buildCard clona il template e popola i campi
+const buildCard = (track, currentTracklist = []) => {
+  const card = tmplCard.content.firstElementChild.cloneNode(true);
+  card.dataset.id = track.id;
+
+  card.querySelector("img").src = track.cover;
+  card.querySelector(".card-title").textContent = track.title;
+  card.querySelector(".card-sub").textContent = track.artist;
+
+  // le classi Bootstrap (es. "d-flex", "gap-3") restano dal template
+  // i listener vengono aggiunti sul nodo clonato
+  card.addEventListener("click", () => window.player.play(track, currentTracklist));
+  return card;
+};
+```
+
+Questo approccio evita XSS da `innerHTML`, mantiene la struttura HTML separata dalla logica JS e sfrutta le classi Bootstrap già presenti nel markup del template.
+
+---
+
 ### Classi modello
 
 Le tre classi mappano i dati grezzi dell'API iTunes in oggetti strutturati usati in tutta l'app:
@@ -265,6 +309,198 @@ player.seek(0.5)         // salta al 50% del brano
 ```
 
 La tracklist passata a `play()` viene usata da `next()` e `prev()` per navigare nell'elenco corretto (album, risultati di ricerca, preferiti, ecc.).
+
+Il footer player viene costruito interamente via JS nel metodo `mount()` e montato sull'elemento `.player` presente in ogni pagina HTML:
+
+```js
+// common.js — mount() costruisce il footer senza innerHTML
+mount() {
+  const footer = document.querySelector(".player");
+
+  const coverImg = document.createElement("img");
+  coverImg.id = "player-cover-img";
+
+  const title = document.createElement("a");
+  title.className = "player-title";
+  title.id = "player-title";
+  title.textContent = "Seleziona un brano";
+
+  const artist = document.createElement("a");
+  artist.className = "player-artist";
+  artist.id = "player-artist";
+
+  // ... costruzione degli altri controlli (shuffle, prev, toggle, next, repeat, volume)
+
+  footer.append(track, controls, volumeSection);
+}
+
+// Al play di un brano, il footer si aggiorna e riceve la classe has-track
+// che abilita l'underline sui link titolo/artista solo quando c'è un brano attivo
+play(track, tracklist = []) {
+  this.audio.src = track.previewUrl;
+  this.audio.play();
+
+  document.getElementById("player-title").textContent = track.title;
+  document.getElementById("player-title").href = `album.html?id=${track.albumId}`;
+  document.getElementById("player-artist").textContent = track.artist;
+  document.getElementById("player-artist").href = `artist.html?id=${track.artistId}`;
+
+  document.querySelector(".player").classList.add("has-track");
+}
+```
+
+---
+
+### Barra di ricerca con debounce
+
+```js
+// search.js — ricerca con debounce 400ms e fetch parallelo
+const debouncedSearch = debounce(doSearch, 400);
+
+input.addEventListener("input", (event) => {
+  debouncedSearch(event.target.value.trim());
+});
+
+const doSearch = async (term) => {
+  const [tracksData, albumsData, artistsData] = await Promise.all([
+    fetchJSON(`${API_BASE}/search?term=${encodeURIComponent(term)}&entity=song&limit=20`),
+    fetchJSON(`${API_BASE}/search?term=${encodeURIComponent(term)}&entity=album&limit=8`),
+    fetchJSON(`${API_BASE}/search?term=${encodeURIComponent(term)}&entity=musicArtist&limit=8`),
+  ]);
+
+  showRow(rowTracks, gridTracks, tracksData.results.map(raw => new Track(raw)), renderTrackCard);
+  showRow(rowAlbums, gridAlbums, albumsData.results.map(raw => new Album(raw)), renderAlbumCard);
+  showRow(rowArtists, gridArtists, artistsData.results.map(raw => new Artist(raw)), renderArtistCard);
+};
+```
+
+Nelle altre pagine (album, artista, playlist) la barra di ricerca reindirizza invece direttamente a `search.html` salvando il termine in `localStorage`.
+
+---
+
+### Filtri sidebar
+
+```js
+// common.js — myFunction() gestisce i badge filtro Artisti / Album / Generi
+const myFunction = () => {
+  const myButtons = document.querySelectorAll(".badge.bg-secondary");
+
+  myButtons.forEach((singleButton) => {
+    singleButton.addEventListener("click", (event) => {
+      const filtro = event.currentTarget.dataset.filter; // "artisti" | "album" | "generi"
+
+      // riclic sullo stesso badge → reset
+      if (filtroActivo === filtro) { resetFiltros(); return; }
+
+      resetFiltros();
+      filtroActivo = filtro;
+
+      if (filtro === "artisti") {
+        // raggruppa i preferiti per artistId, mostra nella sidebar
+        renderResultados([...mapaArtistas.values()], "artisti");
+      } else if (filtro === "album") {
+        renderResultados([...mapaAlbums.values()], "album");
+      } else if (filtro === "generi") {
+        // mostra i generi e filtra le card della home per genere selezionato
+        renderGenreFilter();
+      }
+    });
+  });
+};
+
+// Il filtro generi nasconde le card non corrispondenti usando dataset.genre
+document.querySelectorAll(".card[data-genre]").forEach((card) => {
+  card.style.display = card.dataset.genre.includes(genreLower) ? "" : "none";
+});
+```
+
+---
+
+### Caroselli (row-scroller)
+
+Ogni riga di card nella home è un carosello custom — senza librerie esterne. La struttura HTML è statica: due bottoni freccia e un contenitore `d-flex` vuoto che JS popola con le card.
+
+```html
+<!-- index.html — struttura di ogni riga carosello -->
+<section class="mb-5" id="row-pop">
+  <h2 class="fs-5 mb-3">Suggerimenti pop</h2>
+  <div class="row-scroller">
+    <button class="row-btn row-btn-prev" aria-label="Scorri a sinistra">
+      <ion-icon name="chevron-back-outline"></ion-icon>
+    </button>
+
+    <!-- contenitore vuoto: home.js inserisce qui le card -->
+    <div class="d-flex gap-3 overflow-x-auto pb-2"></div>
+
+    <button class="row-btn row-btn-next" aria-label="Scorri a destra">
+      <ion-icon name="chevron-forward-outline"></ion-icon>
+    </button>
+  </div>
+</section>
+```
+
+I listener vengono attaccati da `initRowNav()` in `home.js` prima che le card vengano inserite, così sono già pronti quando i contenuti arrivano:
+
+```js
+// home.js — initRowNav() attacca i listener a tutti i .row-scroller presenti nell'HTML
+const initRowNav = () => {
+  document.querySelectorAll(".row-scroller").forEach((scroller) => {
+    const list = scroller.querySelector(".d-flex");
+
+    // scroll di una card alla volta — larghezza dinamica + gap Bootstrap (16px)
+    const getAmt = () => (list.firstElementChild?.offsetWidth ?? 160) + 16;
+
+    scroller.querySelector(".row-btn-prev")
+      ?.addEventListener("click", () => list.scrollBy({ left: -getAmt(), behavior: "smooth" }));
+    scroller.querySelector(".row-btn-next")
+      ?.addEventListener("click", () => list.scrollBy({ left: getAmt(), behavior: "smooth" }));
+
+    // drag-to-scroll: trascina il mouse per scorrere orizzontalmente
+    let isDragging = false;
+    let hasDragged = false;
+    let startX = 0;
+    let startScrollLeft = 0;
+
+    // mousedown — segna il punto di partenza
+    list.addEventListener("mousedown", (e) => {
+      isDragging = true;
+      hasDragged = false;
+      startX = e.pageX - list.offsetLeft;   // posizione X del mouse relativa al div
+      startScrollLeft = list.scrollLeft;     // scroll attuale del div
+      list.style.cursor = "grabbing";
+      e.preventDefault();                    // evita la selezione del testo durante il drag
+    });
+
+    // mousemove — sposta lo scroll proporzionalmente al movimento del mouse
+    list.addEventListener("mousemove", (e) => {
+      if (!isDragging) return;
+      hasDragged = true;
+      const x = e.pageX - list.offsetLeft;  // nuova posizione X
+      list.scrollLeft = startScrollLeft - (x - startX);
+      //                                  ↑ quanto si è spostato il mouse
+    });
+
+    // mouseup / mouseleave — ferma il drag
+    // trucco: dopo un drag il browser spara un click sul nodo sotto il cursore
+    // che avvierebbe il play di una card per errore — lo intercettiamo e blocchiamo
+    const stopDrag = () => {
+      if (isDragging && hasDragged) {
+        list.addEventListener("click", (e) => e.stopPropagation(), {
+          capture: true, // intercetta prima che arrivi alla card
+          once: true,    // si auto-rimuove dopo il primo uso
+        });
+      }
+      isDragging = false;
+      list.style.cursor = "";
+    };
+    list.addEventListener("mouseup", stopDrag);
+    list.addEventListener("mouseleave", stopDrag);
+  });
+};
+
+initRowNav(); // chiamata prima di loadHome() — i listener sono pronti prima delle card
+loadHome();
+```
 
 ---
 
