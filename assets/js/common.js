@@ -437,6 +437,7 @@ class Player {
     // Gestione automatica a fine canzone — in home mostra i consigli AI se pronti
     this.audio.addEventListener("ended", () => {
       const siamoInHome = document.getElementById("row-ai") !== null;
+      console.log("[AI] ended — siamoInHome:", siamoInHome, "| consigliInBackground:", consigliInBackground);
 
       if (
         siamoInHome &&
@@ -1248,6 +1249,7 @@ const ottieniSuggerimentiAI = async (currentTrack, buttonElement) => {
   if (!currentTrack) return;
   if (automazioneGiaPartitaPerTraccia === currentTrack.id) return;
   automazioneGiaPartitaPerTraccia = currentTrack.id;
+  console.log("[AI] fetch avviato per:", currentTrack.title, "—", currentTrack.artist);
 
   if (buttonElement) {
     buttonElement.disabled = true;
@@ -1271,9 +1273,13 @@ const ottieniSuggerimentiAI = async (currentTrack, buttonElement) => {
       }),
     });
 
-    if (!response.ok) throw new Error("Errore server");
+    if (!response.ok) throw new Error("Errore server " + response.status);
 
-    const canzoniConsigliateRaw = await response.json();
+    const rawText = await response.text();
+    console.log("[AI] risposta webhook testo:", rawText);
+    if (!rawText || !rawText.trim()) throw new Error("Webhook risposta vuota — workflow n8n non attivo?");
+    const canzoniConsigliateRaw = JSON.parse(rawText);
+    console.log("[AI] risposta webhook raw:", canzoniConsigliateRaw);
     let canzoniConsigliate = [];
 
     canzoniConsigliateRaw.forEach((item) => {
@@ -1296,13 +1302,14 @@ const ottieniSuggerimentiAI = async (currentTrack, buttonElement) => {
         (id) => canzoniConsigliate.find((t) => t.id === id),
       ),
     };
+    console.log("[AI] consigliInBackground pronti:", consigliInBackground.tracce.length, "tracce");
 
     if (buttonElement) {
       buttonElement.disabled = false;
       buttonElement.textContent = "✨ Consigli pronti per la fine del brano";
     }
   } catch (error) {
-    console.error("Errore pre-caricamento AI:", error);
+    console.error("[AI] Errore pre-caricamento:", error);
     consigliInBackground = null;
     automazioneGiaPartitaPerTraccia = null;
     if (buttonElement) {
@@ -1383,4 +1390,14 @@ const mostraConsigliSbloccati = () => {
   };
 
   consigliInBackground = null;
+};
+
+// Test rapido dalla console DevTools: window.testAI()
+window.testAI = async () => {
+  const data = await fetch(
+    "https://itunes.apple.com/search?term=pop&entity=song&limit=5",
+  ).then((r) => r.json());
+  const tracce = data.results.map((raw) => new Track(raw));
+  consigliInBackground = { titoloBranoOrigine: "TEST", tracce };
+  mostraConsigliSbloccati();
 };
