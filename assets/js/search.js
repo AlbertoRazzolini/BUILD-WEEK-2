@@ -1,193 +1,195 @@
 /* ============================================================
-   album.js — pagina dettaglio album
+   search.js — ricerca con debounce
    ============================================================
 
    COSA DEVI FARE
-   1) initPage("home")
-   2) Leggi l'id dell'album dalla query string:
-        const id = new URLSearchParams(window.location.search).get("id");
-   3) Se manca l'id -> messaggio "Album non trovato" e stop.
-   4) fetch /lookup?id=ID&entity=song
-      - results[0] è la collection (album)
-      - results[1..] sono le track
-   5) Costruisci #album-hero con:
-      - cover grande (bigArt)
-      - kicker "ALBUM"
-      - titolo album
-      - sotto-riga: artista · anno · numero brani · durata totale
-      - button "Play" che chiama player.play sulla prima track
-      - button "Cuore" (favourite) sulla prima track
-   6) Costruisci #tracklist:
-      - una riga per track: numero, titolo, durata, cuore
-      - click sulla riga -> player.play(track)
-      - click sul cuore -> toggleFavourite(track)
+   1) initPage("search")
+   2) Recupera l'ultima query da localStorage (STORAGE_KEY_LAST_SEARCH).
+      Se presente, popola l'input e lancia la ricerca.
+   3) Aggancia l'evento "input" all'input #search-input con debounce 400ms.
+   4) doSearch(term):
+      - se term è vuoto -> nascondi i 3 row e svuota i grid
+      - altrimenti fetch in PARALLELO (Promise.all):
+          - tracks   = search?term=...&entity=song&limit=12
+          - albums   = search?term=...&entity=album&limit=8
+          - artists  = search?term=...&entity=musicArtist&limit=8
+      - mostra ciascuna sezione solo se i risultati sono > 0
+      - salva l'ultima query in localStorage
+   5) Per ogni risultato crea una card:
+      - track  -> click = player.play(track)
+      - album  -> click = window.location.href = "album.html?id=" + albumId
+      - artist -> click = window.location.href = "artist.html?id=" + artistId
 */
 
 const player = initPage();
 
-const albumHero  = document.querySelector("#album-hero");
-const tracklist  = document.querySelector("#tracklist");
-const searchInput = document.getElementById("search-input");
+const input        = document.querySelector("#search-input");
+const rowTracks    = document.querySelector("#row-tracks");
+const rowAlbums    = document.querySelector("#row-albums");
+const rowArtists   = document.querySelector("#row-artists");
+const gridTracks   = document.querySelector("#grid-tracks");
+const gridAlbums   = document.querySelector("#grid-albums");
+const gridArtists  = document.querySelector("#grid-artists");
 
-const showNotFound = () => {
-  const msg = document.createElement("p");
-  msg.textContent = "Album non trovato";
-  albumHero.replaceChildren(msg);
-  tracklist.replaceChildren();
-};
+const renderTrackCard = (track, tracklist = []) => {
+  const card = document.createElement("div");
+  card.classList.add("card");
+  card.dataset.id = track.id;
 
-const renderHero = (album, firstTrack, tracks) => {
-  const year = album.releaseDate ? new Date(album.releaseDate).getFullYear() : "";
-  const totalMs = album.tracks.reduce((sum, t) => sum + (t.durationMs || 0), 0);
+  const imageWrap = document.createElement("div");
+  imageWrap.classList.add("card-image-wrap");
+  const img = document.createElement("img");
+  img.src = bigArt(track.cover);
+  img.alt = track.title;
+  imageWrap.appendChild(img);
 
-  const cover = document.createElement("div");
-  cover.classList.add("album-cover");
-  const coverImg = document.createElement("img");
-  coverImg.src = bigArt(album.cover);
-  coverImg.alt = album.title;
-  cover.appendChild(coverImg);
+  // card-add ("+") in alto a sinistra dentro imageWrap — coerente con le card della home
+  imageWrap.appendChild(makeAddButton(track, "card-add"));
 
-  const kicker = document.createElement("p");
-  kicker.classList.add("hero-kicker");
-  kicker.textContent = "ALBUM";
-
-  const title = document.createElement("h1");
-  title.classList.add("hero-title");
-  title.textContent = album.title;
-
-  // nome artista come <a> separato per navigare su artist.html senza innerHTML
-  const artistLink = document.createElement("a");
-  artistLink.textContent = album.artist;
-  artistLink.href = `artist.html?id=${album.artistId}`;
-
-  const sub = document.createElement("p");
-  sub.className = "hero-sub";
-  sub.append(artistLink, ` · ${year} · ${album.trackCount} brani · ${formatTime(totalMs)}`);
+  // card-fav (cuore) in alto a destra dentro imageWrap — coerente con le card della home
+  const btnFav = document.createElement("button");
+  btnFav.classList.add("card-fav");
+  const initFav = isFavourite(track.id);
+  btnFav.classList.toggle("is-fav", initFav);
+  btnFav.setAttribute("aria-label", "Preferito");
+  const heartIcon = document.createElement("ion-icon");
+  heartIcon.setAttribute("name", initFav ? "heart" : "heart-outline");
+  btnFav.appendChild(heartIcon);
+  btnFav.addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleFavourite(track);
+    const nowFav = isFavourite(track.id);
+    btnFav.classList.toggle("is-fav", nowFav);
+    heartIcon.setAttribute("name", nowFav ? "heart" : "heart-outline");
+  });
+  imageWrap.appendChild(btnFav);
 
   const btnPlay = document.createElement("button");
-  btnPlay.classList.add("btn-play-big");
+  btnPlay.classList.add("card-play");
   btnPlay.setAttribute("aria-label", "Play");
-  btnPlay.textContent = "▶";
-  btnPlay.addEventListener("click", () => player.play(firstTrack, tracks)); // MARCO- aggiunto ,tracks
-
-  // "Salva album": il cuore aggiunge/rimuove TUTTE le tracce dell'album dai preferiti,
-  // non solo la prima — è acceso solo quando l'intero album è già tra i preferiti
-  const isAlbumFavourite = () => tracks.length > 0 && tracks.every((t) => isFavourite(t.id));
-
-  const btnFav = document.createElement("button");
-  btnFav.classList.add("btn-fav-big");
-  btnFav.classList.toggle("is-fav", isAlbumFavourite());
-  btnFav.setAttribute("aria-label", "Salva album nei preferiti");
-  const heartHero = document.createElement("ion-icon");
-  heartHero.setAttribute("name", isAlbumFavourite() ? "heart" : "heart-outline");
-  btnFav.appendChild(heartHero);
-  btnFav.addEventListener("click", () => {
-    const shouldRemove = isAlbumFavourite();
-    tracks.forEach((t) => {
-      if (isFavourite(t.id) === shouldRemove) toggleFavourite(t);
-    });
-    const nowFav = isAlbumFavourite();
-    btnFav.classList.toggle("is-fav", nowFav);
-    heartHero.setAttribute("name", nowFav ? "heart" : "heart-outline");
+  const playIcon = document.createElement("ion-icon");
+  playIcon.setAttribute("name", "play-outline");
+  btnPlay.appendChild(playIcon);
+  btnPlay.addEventListener("click", (event) => {
+    event.stopPropagation();
+    player.play(track, tracklist);
   });
+  imageWrap.appendChild(btnPlay);
 
-  const actions = document.createElement("div");
-  actions.classList.add("hero-actions");
-  actions.append(btnPlay, btnFav);
+  const title = document.createElement("p");
+  title.classList.add("card-title", "text-white");
+  title.textContent = track.title;
 
-  const meta = document.createElement("div");
-  meta.classList.add("hero-meta");
-  meta.append(kicker, title, sub, actions);
+  const sub = document.createElement("a");
+  sub.className = "card-sub";
+  sub.textContent = track.artist;
+  sub.href = `artist.html?id=${track.artistId}`;
+  sub.addEventListener("click", (e) => e.stopPropagation());
 
-  albumHero.replaceChildren(cover, meta);
+  card.append(imageWrap, title, sub);
+  card.addEventListener("click", () => player.play(track, tracklist));
+
+  return card;
 };
 
-const renderTracklist = (tracks) => {
-  const rows = tracks.map((track, index) => {
-    const num = document.createElement("span");
-    num.classList.add("track-num");
-    num.textContent = String(index + 1);
+const renderAlbumCard = (album) => {
+  const card = document.createElement("div");
+  card.classList.add("card");
 
-    const trackTitle = document.createElement("span");
-    trackTitle.classList.add("track-title");
-    trackTitle.textContent = track.title;
+  const imageWrap = document.createElement("div");
+  imageWrap.classList.add("card-image-wrap");
+  const img = document.createElement("img");
+  img.src = album.cover;
+  img.alt = album.title;
+  imageWrap.appendChild(img);
 
-    const time = document.createElement("span");
-    time.classList.add("track-time");
-    time.textContent = formatTime(track.durationMs);
+  const title = document.createElement("p");
+  title.classList.add("card-title", "text-white");
+  title.textContent = album.title;
 
-    const btnFav = document.createElement("button");
-    btnFav.classList.add("track-fav");
-    btnFav.classList.toggle("is-fav", isFavourite(track.id));
-    btnFav.setAttribute("aria-label", "Preferito");
-    const heartIcon = document.createElement("ion-icon");
-    heartIcon.setAttribute("name", isFavourite(track.id) ? "heart" : "heart-outline");
-    btnFav.appendChild(heartIcon);
-    btnFav.addEventListener("click", (event) => {
-      event.stopPropagation();
-      toggleFavourite(track);
-      const nowFav = isFavourite(track.id);
-      btnFav.classList.toggle("is-fav", nowFav);
-      heartIcon.setAttribute("name", nowFav ? "heart" : "heart-outline");
-    });
+  // artista dell'album come link: click → artist.html; stopPropagation evita di attivare anche il click sull'intera card (album.html)
+  const sub = document.createElement("a");
+  sub.className = "card-sub";
+  sub.textContent = album.artist;
+  sub.href = `artist.html?id=${album.artistId}`;
+  sub.addEventListener("click", (e) => e.stopPropagation());
 
-    // qui metto il mio "+" sulla riga per aggiungere il brano a una playlist
-    const btnAdd = makeAddButton(track, "track-add");
-
-    const row = document.createElement("div");
-    row.classList.add("track-row");
-    row.dataset.id = track.id;
-    row.append(num, trackTitle, time, btnFav, btnAdd);
-    row.addEventListener("click", () => player.play(track, tracks)); // MARCO- aggiunto ,tracks
-
-    return row;
+  card.append(imageWrap, title, sub);
+  card.addEventListener("click", () => {
+    window.location.href = `album.html?id=${album.id}`;
   });
 
-  tracklist.replaceChildren(...rows);
+  return card;
 };
 
-const loadAlbum = async () => {
-  const id = new URLSearchParams(window.location.search).get("id");
+const renderArtistCard = (artist) => {
+  const card = document.createElement("div");
+  card.classList.add("card");
 
-  if (!id) {
-    showNotFound();
+  const imageWrap = document.createElement("div");
+  imageWrap.classList.add("card-image-wrap", "round");
+  imageWrap.style.display = "grid";
+  imageWrap.style.placeItems = "center";
+  imageWrap.style.fontSize = "32px";
+  imageWrap.textContent = "🎤";
+
+  const title = document.createElement("p");
+  title.classList.add("card-title", "text-white");
+  title.textContent = artist.name;
+
+  const sub = document.createElement("p");
+  sub.classList.add("card-sub");
+  sub.textContent = artist.genre || "Artista";
+
+  card.append(imageWrap, title, sub);
+  card.addEventListener("click", () => {
+    window.location.href = `artist.html?id=${artist.id}`;
+  });
+
+  return card;
+};
+
+const showRow = (section, grid, items, renderCard) => {
+  grid.replaceChildren(...items.map(renderCard));
+  section.hidden = items.length === 0;
+};
+
+const doSearch = async (term) => {
+  if (!term || term.length < 1) {
+    showRow(rowTracks, gridTracks, [], renderTrackCard);
+    showRow(rowAlbums, gridAlbums, [], renderAlbumCard);
+    showRow(rowArtists, gridArtists, [], renderArtistCard);
     return;
   }
 
-  const data = await fetchJSON(`${API_BASE}/lookup?id=${id}&entity=song`);
+  localStorage.setItem(STORAGE_KEY_LAST_SEARCH, term);
 
-  if (!data.results.length) {
-    showNotFound();
-    return;
-  }
+  const [tracksData, albumsData, artistsData] = await Promise.all([
+    fetchJSON(
+      `${API_BASE}/search?term=${encodeURIComponent(term)}&entity=song&limit=20`,
+    ),
+    fetchJSON(
+      `${API_BASE}/search?term=${encodeURIComponent(term)}&entity=album&limit=8`,
+    ),
+    fetchJSON(
+      `${API_BASE}/search?term=${encodeURIComponent(term)}&entity=musicArtist&limit=8`,
+    ),
+  ]);
 
-  const album = new Album(data.results[0]);
-  const tracks = data.results.slice(1).map((raw) => new Track(raw));
-
-  if (!tracks.length) {
-    showNotFound();
-    return;
-  }
-
-  album.tracks = tracks;
-
-  renderHero(album, tracks[0], tracks);
-  renderTracklist(tracks);
+  const tracks = tracksData.results.map((raw) => new Track(raw));
+  showRow(rowTracks, gridTracks, tracks, (track) => renderTrackCard(track, tracks));
+  showRow(rowAlbums, gridAlbums, albumsData.results.map((raw) => new Album(raw)), renderAlbumCard);
+  showRow(rowArtists, gridArtists, artistsData.results.map((raw) => new Artist(raw)), renderArtistCard);
 };
 
-// appena digiti almeno 3 lettere, salva il termine e vai alla pagina di ricerca dedicata
-const goToSearch = (term) => {
-  if (term.length >= 1) {
-    localStorage.setItem(STORAGE_KEY_LAST_SEARCH, term);
-    window.location.href = "search.html";
-  }
-};
-const debouncedGoToSearch = debounce(goToSearch, 400);
+const debouncedSearch = debounce(doSearch, 400);
 
-if (searchInput) {
-  searchInput.addEventListener("input", (event) => {
-    debouncedGoToSearch(event.target.value.trim());
-  });
+input.addEventListener("input", (event) => {
+  debouncedSearch(event.target.value.trim());
+});
+
+const lastQuery = localStorage.getItem(STORAGE_KEY_LAST_SEARCH);
+if (lastQuery) {
+  input.value = lastQuery;
+  doSearch(lastQuery);
 }
-
-loadAlbum();
