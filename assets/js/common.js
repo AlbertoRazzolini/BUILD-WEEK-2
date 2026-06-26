@@ -1241,7 +1241,6 @@ const migrateOldPlaylist = () => {
   localStorage.removeItem(STORAGE_KEY_PLAYLIST);
   renderSidebarPlaylists();
 };
-foc;
 // Menu a tendina "aggiungi a playlist" (.pl-menu, già stilizzato in app.css) — solo uno aperto alla volta
 
 /** @type {?Element} Riferimento al menu "aggiungi a playlist" attualmente aperto, o `null`. */
