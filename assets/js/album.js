@@ -1,27 +1,16 @@
-/* ============================================================
-   album.js — pagina dettaglio album
-   ============================================================
-
-   COSA DEVI FARE
-   1) initPage("home")
-   2) Leggi l'id dell'album dalla query string:
-        const id = new URLSearchParams(window.location.search).get("id");
-   3) Se manca l'id -> messaggio "Album non trovato" e stop.
-   4) fetch /lookup?id=ID&entity=song
-      - results[0] è la collection (album)
-      - results[1..] sono le track
-   5) Costruisci #album-hero con:
-      - cover grande (bigArt)
-      - kicker "ALBUM"
-      - titolo album
-      - sotto-riga: artista · anno · numero brani · durata totale
-      - button "Play" che chiama player.play sulla prima track
-      - button "Cuore" (favourite) sulla prima track
-   6) Costruisci #tracklist:
-      - una riga per track: numero, titolo, durata, cuore
-      - click sulla riga -> player.play(track)
-      - click sul cuore -> toggleFavourite(track)
-*/
+/**
+ * @fileoverview album.js — pagina dettaglio album.
+ *
+ * Legge l'id dell'album dalla query string (`?id=...`); se manca, mostra
+ * "Album non trovato". Altrimenti fa `fetch /lookup?id=ID&entity=song`
+ * (`results[0]` è la collection/album, `results[1..]` sono le tracce) e
+ * costruisce:
+ * - `#album-hero`: cover grande, kicker "ALBUM", titolo, sotto-riga
+ *   artista · anno · numero brani · durata totale, bottone Play (prima
+ *   traccia) e bottone Cuore (favourite sull'intero album)
+ * - `#tracklist`: una riga per traccia (numero, titolo, durata, cuore);
+ *   click sulla riga -> `player.play(track)`, click sul cuore -> `toggleFavourite(track)`
+ */
 
 const player = initPage();
 
@@ -29,6 +18,11 @@ const albumHero  = document.querySelector("#album-hero");
 const tracklist  = document.querySelector("#tracklist");
 const searchInput = document.getElementById("search-input");
 
+/**
+ * Mostra il messaggio "Album non trovato" al posto dell'hero e svuota la tracklist.
+ *
+ * @returns {void}
+ */
 const showNotFound = () => {
   const msg = document.createElement("p");
   msg.textContent = "Album non trovato";
@@ -36,6 +30,18 @@ const showNotFound = () => {
   tracklist.replaceChildren();
 };
 
+/**
+ * Costruisce `#album-hero`: cover, kicker "ALBUM", titolo, sotto-riga
+ * (artista · anno · numero brani · durata totale), bottone Play (avvia
+ * `firstTrack` con `tracks` come tracklist) e bottone Cuore che
+ * aggiunge/rimuove TUTTE le tracce dell'album dai preferiti (acceso solo
+ * quando l'intero album è già tra i preferiti).
+ *
+ * @param {Album} album - Album corrente (con `tracks` assegnato a parte).
+ * @param {Track} firstTrack - Prima traccia, avviata dal bottone Play.
+ * @param {Track[]} tracks - Tutte le tracce dell'album.
+ * @returns {void}
+ */
 const renderHero = (album, firstTrack, tracks) => {
   const year = album.releaseDate ? new Date(album.releaseDate).getFullYear() : "";
   const totalMs = album.tracks.reduce((sum, t) => sum + (t.durationMs || 0), 0);
@@ -102,6 +108,13 @@ const renderHero = (album, firstTrack, tracks) => {
   albumHero.replaceChildren(cover, meta);
 };
 
+/**
+ * Costruisce `#tracklist`: una riga per traccia con numero, titolo, durata,
+ * bottone preferito e bottone "+" playlist. Click sulla riga -> `player.play(track, tracks)`.
+ *
+ * @param {Track[]} tracks - Tracce dell'album da renderizzare.
+ * @returns {void}
+ */
 const renderTracklist = (tracks) => {
   const rows = tracks.map((track, index) => {
     const num = document.createElement("span");
@@ -146,6 +159,13 @@ const renderTracklist = (tracks) => {
   tracklist.replaceChildren(...rows);
 };
 
+/**
+ * Legge l'id album dalla query string, recupera album e tracce dall'API
+ * iTunes e renderizza hero + tracklist. Mostra "Album non trovato" se manca
+ * l'id, l'album non esiste o non ha tracce.
+ *
+ * @returns {Promise<void>}
+ */
 const loadAlbum = async () => {
   const id = new URLSearchParams(window.location.search).get("id");
 
@@ -175,13 +195,19 @@ const loadAlbum = async () => {
   renderTracklist(tracks);
 };
 
-// appena digiti almeno 3 lettere, salva il termine e vai alla pagina di ricerca dedicata
+/**
+ * Salva il termine digitato e naviga alla pagina di ricerca dedicata.
+ *
+ * @param {string} term - Termine di ricerca da salvare.
+ * @returns {void}
+ */
 const goToSearch = (term) => {
   if (term.length >= 1) {
     localStorage.setItem(STORAGE_KEY_LAST_SEARCH, term);
     window.location.href = "search.html";
   }
 };
+/** @type {Function} Versione "debounced" (400ms) di {@link goToSearch}. */
 const debouncedGoToSearch = debounce(goToSearch, 400);
 
 if (searchInput) {
