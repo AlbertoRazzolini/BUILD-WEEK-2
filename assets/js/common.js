@@ -72,18 +72,48 @@ const MAX_HISTORY = 12;
 /* ============================ 2. Helpers ============================ */
 
 /*
+  fetchJSONP(url)
+  - L'API iTunes Search non manda l'header CORS (Access-Control-Allow-Origin),
+    quindi fetch() viene sempre bloccato dal browser. L'API supporta però
+    il classico parametro JSONP "callback": carichiamo la risposta come
+    <script>, che non è soggetto a CORS, e risolviamo la Promise quando
+    Apple richiama la nostra funzione globale.
+*/
+const fetchJSONP = (url) => {
+  return new Promise((resolve, reject) => {
+    const callbackName = `jsonp_cb_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
+    const script = document.createElement("script");
+
+    const cleanup = () => {
+      delete window[callbackName];
+      script.remove();
+    };
+
+    window[callbackName] = (data) => {
+      cleanup();
+      resolve(data);
+    };
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("Errore di rete (JSONP)"));
+    };
+
+    const separator = url.includes("?") ? "&" : "?";
+    script.src = `${url}${separator}callback=${callbackName}`;
+    document.body.appendChild(script);
+  });
+};
+
+/*
   fetchJSON(url)
-  - Fa una richiesta GET e ritorna i dati JSON
-  - Gestisce errori HTTP e di rete con try/catch
+  - Fa una richiesta GET (via JSONP, vedi fetchJSONP) e ritorna i dati JSON
+  - Gestisce errori di rete con try/catch
   - In caso di errore ritorna { results: [], resultCount: 0 } per semplificare i chiamanti
 */
 const fetchJSON = async (url) => {
   try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    return await response.json();
+    return await fetchJSONP(url);
   } catch (error) {
     console.error("fetchJSON ha fallito:", error);
   }
