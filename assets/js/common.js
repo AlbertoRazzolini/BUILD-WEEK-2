@@ -152,7 +152,9 @@ const renderGenreFilter = () => {
     const contenedor = document.getElementById("sidebar-filter-results");
     if (contenedor) {
       contenedor.querySelectorAll(".sidebar-filter-item").forEach((el) => {
-        if (el.querySelector(".filter-label")?.textContent === filtroGeneroActivo) {
+        if (
+          el.querySelector(".filter-label")?.textContent === filtroGeneroActivo
+        ) {
           el.classList.add("active-genre");
         }
       });
@@ -176,8 +178,14 @@ const myFunction = () => {
       b.classList.add("bg-secondary");
     });
     // ripristina card, sezioni e preferiti sidebar nascosti dal filtro generi
-    document.querySelectorAll(".card[data-genre]").forEach((c) => (c.style.display = ""));
-    document.querySelectorAll("#sidebar-favs-list [data-genre], #mobile-favs-list [data-genre]").forEach((item) => item.classList.remove("genre-hidden"));
+    document
+      .querySelectorAll(".card[data-genre]")
+      .forEach((c) => (c.style.display = ""));
+    document
+      .querySelectorAll(
+        "#sidebar-favs-list [data-genre], #mobile-favs-list [data-genre]",
+      )
+      .forEach((item) => item.classList.remove("genre-hidden"));
     [
       "row-history",
       "row-favourites",
@@ -303,12 +311,21 @@ const renderResultados = (lista, tipo) => {
         // filtra le card della home e i preferiti in sidebar per genere
         const genreLower = elemento.title.toLowerCase();
         document.querySelectorAll(".card[data-genre]").forEach((card) => {
-          card.style.display = card.dataset.genre.includes(genreLower) ? "" : "none";
+          card.style.display = card.dataset.genre.includes(genreLower)
+            ? ""
+            : "none";
         });
-        document.querySelectorAll("#sidebar-favs-list [data-genre], #mobile-favs-list [data-genre]").forEach((item) => {
-          const g = item.dataset.genre;
-          item.classList.toggle("genre-hidden", !!(g && !g.includes(genreLower)));
-        });
+        document
+          .querySelectorAll(
+            "#sidebar-favs-list [data-genre], #mobile-favs-list [data-genre]",
+          )
+          .forEach((item) => {
+            const g = item.dataset.genre;
+            item.classList.toggle(
+              "genre-hidden",
+              !!(g && !g.includes(genreLower)),
+            );
+          });
         // nasconde le sezioni della home che non hanno più card visibili
         [
           "row-history",
@@ -1211,7 +1228,10 @@ const initPage = () => {
 
     const stopDrag = () => {
       if (isDragging && hasDragged) {
-        sidebar.addEventListener("click", (e) => e.stopPropagation(), { capture: true, once: true });
+        sidebar.addEventListener("click", (e) => e.stopPropagation(), {
+          capture: true,
+          once: true,
+        });
       }
       isDragging = false;
       sidebar.style.cursor = "";
