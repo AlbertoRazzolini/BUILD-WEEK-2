@@ -172,6 +172,8 @@ const debounce = (fn, ms) => {
 // siccome salvo sempre brani, ricavo album e artisti da quelli.
 // li ho fatti funzionare come su Spotify: ricliccando lo stesso
 // filtro torno alla normalità, e ne tengo attivo solo uno alla volta.
+let filtroAttivo = null;
+let filtroGenereAttivo = null; // genere selezionato nella lista — persiste tra re-render
 
 /** @type {?string} Filtro badge attualmente attivo: `"artisti"`, `"album"`, `"generi"` o `null`. */
 let filtroActivo = null;
@@ -186,23 +188,21 @@ let filtroGeneroActivo = null;
  * @returns {void}
  */
 const renderGenreFilter = () => {
-  const mapaGeneros = new Map();
+  const mappaGeneri = new Map();
   getFavourites().forEach((track) => {
-    const genero = track.genre || "Sconosciuto";
-    if (!mapaGeneros.has(genero)) {
-      mapaGeneros.set(genero, { id: genero, title: genero });
+    const genere = track.genre || "Sconosciuto";
+    if (!mappaGeneri.has(genere)) {
+      mappaGeneri.set(genere, { id: genere, title: genere });
     }
   });
-  renderResultados([...mapaGeneros.values()], "generi");
+  renderRisultati([...mappaGeneri.values()], "generi");
 
   // riapplica l'evidenziazione del genere attivo dopo il re-render
-  if (filtroGeneroActivo) {
-    const contenedor = document.getElementById("sidebar-filter-results");
-    if (contenedor) {
-      contenedor.querySelectorAll(".sidebar-filter-item").forEach((el) => {
-        if (
-          el.querySelector(".filter-label")?.textContent === filtroGeneroActivo
-        ) {
+  if (filtroGenereAttivo) {
+    const contenitore = document.getElementById("sidebar-filter-results");
+    if (contenitore) {
+      contenitore.querySelectorAll(".sidebar-filter-item").forEach((el) => {
+        if (el.querySelector(".filter-label")?.textContent === filtroGenereAttivo) {
           el.classList.add("active-genre");
         }
       });
@@ -222,13 +222,13 @@ const myFunction = () => {
   const myButtons = document.querySelectorAll(".badge.bg-secondary");
   if (myButtons.length === 0) return;
 
-  const contenedor = document.getElementById("sidebar-filter-results");
+  const contenitore = document.getElementById("sidebar-filter-results");
 
   // mi svuota la lista e spegne il verde da tutti i badge
-  const resetFiltros = () => {
-    filtroActivo = null;
-    filtroGeneroActivo = null;
-    if (contenedor) contenedor.replaceChildren();
+  const resetFiltri = () => {
+    filtroAttivo = null;
+    filtroGenereAttivo = null;
+    if (contenitore) contenitore.replaceChildren();
     myButtons.forEach((b) => {
       b.classList.remove("bg-success");
       b.classList.add("bg-secondary");
@@ -259,14 +259,14 @@ const myFunction = () => {
       const filtro = event.currentTarget.dataset.filter;
 
       // se riclicco il filtro che ho già attivo, lo spengo e torno normale
-      if (filtroActivo === filtro) {
-        resetFiltros();
+      if (filtroAttivo === filtro) {
+        resetFiltri();
         return;
       }
 
       // accendo questo filtro e spengo gli altri, poi lo coloro di verde
-      resetFiltros();
-      filtroActivo = filtro;
+      resetFiltri();
+      filtroAttivo = filtro;
       event.currentTarget.classList.remove("bg-secondary");
       event.currentTarget.classList.add("bg-success");
 
@@ -274,23 +274,23 @@ const myFunction = () => {
 
       if (filtro === "artisti") {
         // tengo un artista solo per ogni artistId così non li ripeto
-        const mapaArtistas = new Map();
+        const mappaArtisti = new Map();
         favourites.forEach((track) => {
-          if (!mapaArtistas.has(track.artistId)) {
-            mapaArtistas.set(track.artistId, {
+          if (!mappaArtisti.has(track.artistId)) {
+            mappaArtisti.set(track.artistId, {
               id: track.artistId,
               title: track.artist,
               cover: track.cover, // MARCO - aggiungo track.cover per selezionare anche l'immagine
             });
           }
         });
-        renderResultados([...mapaArtistas.values()], "artisti");
+        renderRisultati([...mappaArtisti.values()], "artisti");
       } else if (filtro === "album") {
         // stessa cosa per gli album: uno solo per ogni albumId
-        const mapaAlbums = new Map();
+        const mappaAlbum = new Map();
         favourites.forEach((track) => {
-          if (!mapaAlbums.has(track.albumId)) {
-            mapaAlbums.set(track.albumId, {
+          if (!mappaAlbum.has(track.albumId)) {
+            mappaAlbum.set(track.albumId, {
               id: track.albumId,
               title: track.album,
               artist: track.artist,
@@ -298,7 +298,7 @@ const myFunction = () => {
             });
           }
         });
-        renderResultados([...mapaAlbums.values()], "album");
+        renderRisultati([...mappaAlbum.values()], "album");
       } else if (filtro === "generi") {
         renderGenreFilter();
       }
@@ -306,17 +306,11 @@ const myFunction = () => {
   });
 };
 
-/**
- * Disegna i risultati di un filtro badge dentro `#sidebar-filter-results`,
- * clonando il `<template>` giusto in base al tipo (come già si fa per i preferiti).
- *
- * @param {Array<Object>} lista - Elementi da renderizzare (album, artisti o generi).
- * @param {("album"|"artisti"|"generi")} tipo - Tipo di elementi in `lista`, determina il template da usare.
- * @returns {void}
- */
-const renderResultados = (lista, tipo) => {
-  const contenedor = document.getElementById("sidebar-filter-results");
-  if (!contenedor) return;
+// questa la uso per disegnare i risultati dentro #sidebar-filter-results.
+// clono il <template> giusto in base al tipo, come faccio già per i preferiti.
+const renderRisultati = (lista, tipo) => {
+  const contenitore = document.getElementById("sidebar-filter-results");
+  if (!contenitore) return;
 
   // scelgo il template a seconda di cosa devo mostrare
   let tmpl = null;
@@ -365,8 +359,8 @@ const renderResultados = (lista, tipo) => {
       item.style.cursor = "pointer";
       item.addEventListener("click", () => {
         // salva e evidenzia il genere attivo, toglie l'attivo dagli altri
-        filtroGeneroActivo = elemento.title;
-        contenedor
+        filtroGenereAttivo = elemento.title;
+        contenitore
           .querySelectorAll(".sidebar-filter-item")
           .forEach((el) => el.classList.remove("active-genre"));
         item.classList.add("active-genre");
@@ -410,7 +404,7 @@ const renderResultados = (lista, tipo) => {
   };
 
   // svuoto e rimetto dentro tutti i nuovi elementi
-  contenedor.replaceChildren(...lista.map(buildItem));
+  contenitore.replaceChildren(...lista.map(buildItem));
 };
 
 /* ============================ 3. Classi modello ============================ */
@@ -1104,7 +1098,7 @@ const toggleFavourite = (track) => {
 
   renderSidebarFavourites();
   // se il filtro generi è aperto, aggiorna la lista con i preferiti appena modificati
-  if (filtroActivo === "generi") renderGenreFilter();
+  if (filtroAttivo === "generi") renderGenreFilter();
 };
 
 // Helper playlist — stessa struttura dei preferiti.
