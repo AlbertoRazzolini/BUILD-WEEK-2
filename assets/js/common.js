@@ -175,10 +175,6 @@ const debounce = (fn, ms) => {
 let filtroAttivo = null;
 let filtroGenereAttivo = null; // genere selezionato nella lista — persiste tra re-render
 
-/** @type {?string} Filtro badge attualmente attivo: `"artisti"`, `"album"`, `"generi"` o `null`. */
-let filtroActivo = null;
-/** @type {?string} Genere selezionato nella lista filtro — persiste tra re-render. */
-let filtroGeneroActivo = null;
 
 /**
  * Costruisce e renderizza, dentro `#sidebar-filter-results`, la lista dei
