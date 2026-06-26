@@ -117,6 +117,7 @@ const loadHome = async () => {
 };
 // 3 RENDER DELLE CARD: clona #tmpl-card per ogni track e popola img/titolo/artista
 const ROW_IDS = {
+  "Basata sui tuoi gusti": "row-ai",
   "Riprodotti di recente": "row-history",
   "I tuoi preferiti": "row-favourites",
   "Suggerimenti pop": "row-pop",
@@ -231,10 +232,27 @@ const renderRow = (rowTitle, tracks) => {
     container = list;
   }
 
-  // container.replaceChildren(...tracks.map(buildCard));
+  // Passa esplicitamente sia la traccia singola sia l'intero array 'tracks' della riga
+  const nuoveCards = tracks.map((track) => buildCard(track, tracks));
 
-  // MODIFICA: Passa esplicitamente sia la traccia singola sia l'intero array 'tracks' della riga
-  container.replaceChildren(...tracks.map(track => buildCard(track, tracks)));
+  // La riga AI accumula i consigli nel tempo invece di sovrascriverli: unisco vecchie e nuove card e dedup per titolo+artista
+  if (knownId === "row-ai") {
+    const tutteLeCard = [...Array.from(container.children), ...nuoveCards];
+    const idVisti = new Set();
+    const cardUniche = [];
+    tutteLeCard.forEach((card) => {
+      const titolo = card.querySelector(".card-title")?.textContent || "";
+      const artista = card.querySelector(".card-sub")?.textContent || "";
+      const chiave = `${titolo}-${artista}`.toLowerCase().trim();
+      if (!idVisti.has(chiave) && chiave !== "-") {
+        idVisti.add(chiave);
+        cardUniche.push(card);
+      }
+    });
+    container.replaceChildren(...cardUniche);
+  } else {
+    container.replaceChildren(...nuoveCards);
+  }
 };
 // appena digiti almeno 3 lettere, salva il termine e vai alla pagina di ricerca dedicata
 const goToSearch = (term) => {

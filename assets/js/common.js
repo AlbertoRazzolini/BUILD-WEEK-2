@@ -433,10 +433,23 @@ class Player {
       }
     });
 
-    // Gestione automatica a fine canzone
+    // Gestione automatica a fine canzone — in Home parte la "radio AI" (senza modale)
     this.audio.addEventListener("ended", () => {
+      // i consigli AI si attivano solo in Home (dove esiste #row-ai)
+      const siamoInHome = document.getElementById("row-ai") !== null;
+
+      if (
+        siamoInHome &&
+        consigliInBackground &&
+        consigliInBackground.tracce &&
+        consigliInBackground.tracce.length > 0
+      ) {
+        avviaConsigliAutomatici();
+        return; // blocca la coda standard e avvia il prossimo consiglio AI
+      }
+
       if (this.currentTracklist.length > 1) {
-        this.next(); // Passa alla prossima se è un album
+        this.next(); // Passa alla prossima se è un album/playlist
       } else {
         this.isPlaying = false;
         const btnToggle = document.getElementById("btn-toggle");
@@ -651,6 +664,17 @@ class Player {
     if (footer) footer.classList.add("has-track");
 
     this.updateNowPlayingUI();
+
+    // Pre-carica in background i consigli AI per il brano corrente (solo in Home,
+    // dove esiste #row-ai). Si attiva ad ogni brano — anche quelli avviati dalla
+    // radio AI — così le proposte si adattano di continuo a ciò che ascolti.
+    if (
+      typeof ottieniSuggerimentiAI === "function" &&
+      document.getElementById("row-ai")
+    ) {
+      const btnAI = document.getElementById("btn-genera-ai");
+      ottieniSuggerimentiAI(this.currentTrack, btnAI);
+    }
   }
   //comportamento del toggle delbottone play /pause
   togglePlay() {
@@ -1221,4 +1245,168 @@ const initPage = () => {
   }
 
   return player;
+};
+
+/* ============================ 8. Consigli AI (n8n) ============================ */
+/*
+  Sistema di consigli "Basata sui tuoi gusti":
+  - ad ogni play() pre-carica in background dei brani simili da un webhook n8n
+  - quando il brano in Home finisce, mostra una modale dorata + un toast e
+    avvia automaticamente il primo brano consigliato non ancora riprodotto
+  Tutto è isolato: su pagine senza #row-ai i consigli non vengono mostrati.
+*/
+
+let consigliInBackground = null; // ultimi consigli pre-caricati { titoloBranoOrigine, tracce }
+let automazioneGiaPartitaPerTraccia = null; // evita doppie chiamate per lo stesso brano
+let canzoniGiaRiprodottiAI = []; // memoria di sessione: evita di ripetere gli stessi consigli
+
+const ottieniSuggerimentiAI = async (currentTrack, buttonElement) => {
+  if (!currentTrack) return;
+
+  // se ho già lanciato la richiesta per questo brano, non la rifaccio
+  if (automazioneGiaPartitaPerTraccia === currentTrack.id) return;
+  automazioneGiaPartitaPerTraccia = currentTrack.id;
+
+  if (buttonElement) {
+    buttonElement.disabled = true;
+    buttonElement.innerHTML = `
+      <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+      🧠 L'AI sta già elaborando i prossimi consigli in background...
+    `;
+  }
+
+  try {
+    // URL di TEST n8n (/webhook-test/): funziona solo mentre nel workflow è
+    // attivo "Listen for test event", e per una sola esecuzione alla volta.
+    // Per la produzione usare "/webhook/" con il workflow attivo (toggle Active).
+    const N8N_WEBHOOK_URL =
+      "https://javiertorres.app.n8n.cloud/webhook/e7704661-742b-456b-9d9d-89158ebda3af";
+
+    const response = await fetch(N8N_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        titolo: currentTrack.title.replace(/'/g, " "),
+        artista: currentTrack.artist.replace(/'/g, " "),
+        genere: currentTrack.genre || "Music",
+      }),
+    });
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    // Il webhook a volte risponde con corpo vuoto o testo non-JSON: leggo prima
+    // come testo ed esco con grazia, invece di far esplodere response.json().
+    const rawText = await response.text();
+    if (!rawText.trim()) {
+      console.warn(
+        "Webhook AI: risposta vuota — nessun consiglio. Controlla il nodo 'Respond to Webhook' in n8n.",
+      );
+      if (buttonElement) {
+        buttonElement.disabled = false;
+        buttonElement.textContent = "✨ Genera consigli AI";
+      }
+      return;
+    }
+
+    let canzoniConsigliateRaw;
+    try {
+      canzoniConsigliateRaw = JSON.parse(rawText);
+    } catch (e) {
+      console.warn("Webhook AI: risposta non in formato JSON:", rawText.slice(0, 200));
+      if (buttonElement) {
+        buttonElement.disabled = false;
+        buttonElement.textContent = "✨ Genera consigli AI";
+      }
+      return;
+    }
+
+    const canzoniConsigliate = [];
+
+    // accetto sia un array sia un singolo oggetto, poi normalizzo i risultati annidati
+    const elementi = Array.isArray(canzoniConsigliateRaw)
+      ? canzoniConsigliateRaw
+      : [canzoniConsigliateRaw];
+    elementi.forEach((item) => {
+      let target = item.data ? item.data : item.body ? item.body : item;
+      if (typeof target === "string") {
+        try {
+          target = JSON.parse(target.trim());
+        } catch (e) {
+          /* stringa non JSON: la ignoro */
+        }
+      }
+      if (target && target.results && Array.isArray(target.results)) {
+        target.results.forEach((trackObj) => {
+          canzoniConsigliate.push(new Track(trackObj));
+        });
+      }
+    });
+
+    // dedup per id mantenendo l'ordine
+    consigliInBackground = {
+      titoloBranoOrigine: currentTrack.title,
+      tracce: Array.from(new Set(canzoniConsigliate.map((t) => t.id))).map(
+        (id) => canzoniConsigliate.find((t) => t.id === id),
+      ),
+    };
+
+    if (buttonElement) {
+      buttonElement.disabled = false;
+      buttonElement.textContent = "✨ Consigli pronti per la fine del brano";
+    }
+  } catch (error) {
+    console.error("Errore pre-caricamento AI:", error);
+    if (buttonElement) {
+      buttonElement.disabled = false;
+      buttonElement.textContent = "✨ Genera consigli AI";
+    }
+  }
+};
+
+// Radio AI: senza modale. Stampa la riga "Basata sui tuoi gusti" in Home e
+// avvia automaticamente il prossimo consiglio non ancora riprodotto. Ogni brano
+// avviato pre-carica i propri consigli, quindi la radio si adatta di continuo.
+const avviaConsigliAutomatici = () => {
+  if (
+    !consigliInBackground ||
+    !consigliInBackground.tracce ||
+    consigliInBackground.tracce.length === 0
+  )
+    return;
+
+  // copio in locali i dati prima di consumarli (consigliInBackground viene azzerato a fine funzione)
+  const tracce = consigliInBackground.tracce;
+  consigliInBackground = null; // consumati: il prossimo brano ne pre-caricherà di nuovi
+
+  // 1. stampa/accumula i consigli nella sezione fissa della Home (renderRow vive in home.js)
+  if (typeof renderRow === "function") {
+    renderRow("Basata sui tuoi gusti", tracce);
+  }
+
+  // 2. anti-ripetizione: scelgo il primo consiglio mai avviato in automatico
+  let canzoneDaRiprodurre = tracce.find(
+    (t) => !canzoniGiaRiprodottiAI.includes(t.id),
+  );
+  // se le ho ascoltate tutte, resetto la memoria e riparto dalla prima
+  if (!canzoneDaRiprodurre) {
+    canzoniGiaRiprodottiAI = [];
+    canzoneDaRiprodurre = tracce[0];
+  }
+
+  // 3. avvio il brano (con l'intera lista come coda di fallback) e mostro un toast discreto
+  if (canzoneDaRiprodurre && window.player) {
+    canzoniGiaRiprodottiAI.push(canzoneDaRiprodurre.id);
+    window.player.play(canzoneDaRiprodurre, tracce);
+
+    const toast = document.getElementById("ai-toast");
+    if (toast) {
+      toast.innerHTML = `✨ Radio basata sui tuoi gusti · <b>${canzoneDaRiprodurre.title}</b> — ${canzoneDaRiprodurre.artist}`;
+      toast.classList.remove("d-none");
+      setTimeout(() => toast.classList.add("show"), 50);
+      setTimeout(() => {
+        toast.classList.remove("show");
+        setTimeout(() => toast.classList.add("d-none"), 400);
+      }, 4000);
+    }
+  }
 };
