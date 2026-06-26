@@ -277,23 +277,6 @@
             </div>
           </section>
 
-          <!-- Popolata da mostraConsigliSbloccati (common.js) al termine del brano in home -->
-          <section id="row-ai" class="mb-5 d-none">
-            <h2 class="fs-5 mb-3">Basata sui tuoi gusti</h2>
-            <div class="row-scroller">
-              <button
-                class="row-btn row-btn-prev"
-                aria-label="Scorri a sinistra"
-              >
-                <ion-icon name="chevron-back-outline"></ion-icon>
-              </button>
-              <div class="d-flex gap-3 overflow-x-auto pb-2"></div>
-              <button class="row-btn row-btn-next" aria-label="Scorri a destra">
-                <ion-icon name="chevron-forward-outline"></ion-icon>
-              </button>
-            </div>
-          </section>
-
           <!-- Popolato da home.js con fetch iTunes — query "pop" -->
           <section class="mb-5" id="row-pop">
             <h2 class="fs-5 mb-3">Suggerimenti pop</h2>
@@ -449,21 +432,5 @@
     <!-- Script EpiTunes -->
     <script src="assets/js/common.js"></script>
     <script src="assets/js/home.js"></script>
-
-    <!-- Banner notifica AI + Modale 3D consigli -->
-    <div id="ai-toast" class="ai-toast d-none"></div>
-
-    <div id="ai-modal" class="ai-modal-overlay d-none">
-      <div class="ai-modal-content">
-        <button id="ai-modal-close" class="ai-modal-close-btn">&times;</button>
-        <h2 id="ai-modal-title" class="fs-4 mb-4 text-center text-white">
-          ✨ L'AI ha scelto per te
-        </h2>
-        <div
-          id="ai-modal-cards-container"
-          class="d-flex gap-3 justify-content-center pb-2"
-        ></div>
-      </div>
-    </div>
   </body>
 </html>
