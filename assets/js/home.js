@@ -204,7 +204,7 @@ const buildCard = (track, currentTracklist = []) => { // <-- MODIFICA: Accetta l
 
   card.addEventListener("click", () => window.player.play(track, currentTracklist)); // <-- MODIFICA: Passa la riga al player
 
-  return card;
+  return card; 
 };
 
 const renderRow = (rowTitle, tracks) => {
