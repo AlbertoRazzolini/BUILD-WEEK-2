@@ -277,6 +277,23 @@
             </div>
           </section>
 
+          <!-- Riga fissa dei consigli AI "Basata sui tuoi gusti" — popolata da home.js (row-ai) -->
+          <section class="mb-5 d-none" id="row-ai">
+            <h2 class="fs-5 mb-3">Basata sui tuoi gusti</h2>
+            <div class="row-scroller">
+              <button
+                class="row-btn row-btn-prev"
+                aria-label="Scorri a sinistra"
+              >
+                <ion-icon name="chevron-back-outline"></ion-icon>
+              </button>
+              <div class="d-flex gap-3 overflow-x-auto pb-2"></div>
+              <button class="row-btn row-btn-next" aria-label="Scorri a destra">
+                <ion-icon name="chevron-forward-outline"></ion-icon>
+              </button>
+            </div>
+          </section>
+
           <!-- Popolato da home.js con fetch iTunes — query "pop" -->
           <section class="mb-5" id="row-pop">
             <h2 class="fs-5 mb-3">Suggerimenti pop</h2>
@@ -432,5 +449,8 @@
     <!-- Script EpiTunes -->
     <script src="assets/js/common.js"></script>
     <script src="assets/js/home.js"></script>
+
+    <!-- ===== Radio AI: banner notifica discreto (nessuna modale) ===== -->
+    <div id="ai-toast" class="ai-toast d-none"></div>
   </body>
 </html>
