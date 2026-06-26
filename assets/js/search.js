@@ -1,25 +1,19 @@
-/* ============================================================
-   search.js — ricerca con debounce
-   ============================================================
-
-   COSA DEVI FARE
-   1) initPage("search")
-   2) Recupera l'ultima query da localStorage (STORAGE_KEY_LAST_SEARCH).
-      Se presente, popola l'input e lancia la ricerca.
-   3) Aggancia l'evento "input" all'input #search-input con debounce 400ms.
-   4) doSearch(term):
-      - se term è vuoto -> nascondi i 3 row e svuota i grid
-      - altrimenti fetch in PARALLELO (Promise.all):
-          - tracks   = search?term=...&entity=song&limit=12
-          - albums   = search?term=...&entity=album&limit=8
-          - artists  = search?term=...&entity=musicArtist&limit=8
-      - mostra ciascuna sezione solo se i risultati sono > 0
-      - salva l'ultima query in localStorage
-   5) Per ogni risultato crea una card:
-      - track  -> click = player.play(track)
-      - album  -> click = window.location.href = "album.html?id=" + albumId
-      - artist -> click = window.location.href = "artist.html?id=" + artistId
-*/
+/**
+ * @fileoverview search.js — ricerca con debounce.
+ *
+ * Recupera l'ultima query da localStorage (`STORAGE_KEY_LAST_SEARCH`): se
+ * presente, popola l'input e lancia la ricerca. L'evento "input" su
+ * `#search-input` è agganciato con debounce 400ms.
+ *
+ * {@link doSearch} esegue in parallelo (`Promise.all`) la ricerca di tracce,
+ * album e artisti, mostra ciascuna sezione solo se ha risultati e salva
+ * l'ultima query in localStorage.
+ *
+ * Per ogni risultato si crea una card:
+ * - track  -> click = `player.play(track)`
+ * - album  -> click = `window.location.href = "album.html?id=" + albumId`
+ * - artist -> click = `window.location.href = "artist.html?id=" + artistId`
+ */
 
 const player = initPage();
 
@@ -31,6 +25,15 @@ const gridTracks   = document.querySelector("#grid-tracks");
 const gridAlbums   = document.querySelector("#grid-albums");
 const gridArtists  = document.querySelector("#grid-artists");
 
+/**
+ * Crea una card di risultato per un brano: cover, bottone "+" playlist,
+ * bottone preferito, bottone play, titolo e artista (link ad artist.html).
+ * Click sulla card o sul bottone play -> `player.play(track, tracklist)`.
+ *
+ * @param {Track} track - Brano da mostrare nella card.
+ * @param {Track[]} [tracklist=[]] - Tracklist dei risultati, passata al player per next/prev.
+ * @returns {Element} Elemento `.card` pronto per essere inserito nel DOM.
+ */
 const renderTrackCard = (track, tracklist = []) => {
   const card = document.createElement("div");
   card.classList.add("card");
@@ -92,6 +95,13 @@ const renderTrackCard = (track, tracklist = []) => {
   return card;
 };
 
+/**
+ * Crea una card di risultato per un album: cover, titolo e artista (link ad
+ * artist.html). Click sulla card -> naviga ad album.html.
+ *
+ * @param {Album} album - Album da mostrare nella card.
+ * @returns {Element} Elemento `.card` pronto per essere inserito nel DOM.
+ */
 const renderAlbumCard = (album) => {
   const card = document.createElement("div");
   card.classList.add("card");
@@ -122,6 +132,13 @@ const renderAlbumCard = (album) => {
   return card;
 };
 
+/**
+ * Crea una card di risultato per un artista: placeholder 🎤, nome e genere.
+ * Click sulla card -> naviga ad artist.html.
+ *
+ * @param {Artist} artist - Artista da mostrare nella card.
+ * @returns {Element} Elemento `.card` pronto per essere inserito nel DOM.
+ */
 const renderArtistCard = (artist) => {
   const card = document.createElement("div");
   card.classList.add("card");
@@ -149,11 +166,30 @@ const renderArtistCard = (artist) => {
   return card;
 };
 
+/**
+ * Popola una griglia di risultati con le card costruite da `renderCard` e
+ * mostra/nasconde la sezione in base al numero di risultati.
+ *
+ * @param {Element} section - Sezione `<section>` da mostrare/nascondere.
+ * @param {Element} grid - Contenitore griglia da popolare.
+ * @param {Array<Object>} items - Elementi (Track/Album/Artist) da renderizzare.
+ * @param {function(Object): Element} renderCard - Funzione che costruisce la card per un elemento.
+ * @returns {void}
+ */
 const showRow = (section, grid, items, renderCard) => {
   grid.replaceChildren(...items.map(renderCard));
   section.hidden = items.length === 0;
 };
 
+/**
+ * Esegue la ricerca per un termine: se vuoto nasconde le tre righe risultati,
+ * altrimenti effettua in parallelo (`Promise.all`) la ricerca di tracce,
+ * album e artisti sull'API iTunes, popola le rispettive righe e salva il
+ * termine come ultima ricerca in localStorage.
+ *
+ * @param {string} term - Termine di ricerca.
+ * @returns {Promise<void>}
+ */
 const doSearch = async (term) => {
   if (!term || term.length < 1) {
     showRow(rowTracks, gridTracks, [], renderTrackCard);
@@ -182,6 +218,7 @@ const doSearch = async (term) => {
   showRow(rowArtists, gridArtists, artistsData.results.map((raw) => new Artist(raw)), renderArtistCard);
 };
 
+/** @type {Function} Versione "debounced" (400ms) di {@link doSearch}. */
 const debouncedSearch = debounce(doSearch, 400);
 
 input.addEventListener("input", (event) => {

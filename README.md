@@ -62,6 +62,8 @@ BUILD-WEEK-2/
 └── README.md
 ```
 
+> Tutte le funzioni, classi e variabili principali dei file in `assets/js/` sono documentate con commenti **JSDoc** (`@param`, `@returns`, `@type`).
+
 ---
 
 ## Pagine
