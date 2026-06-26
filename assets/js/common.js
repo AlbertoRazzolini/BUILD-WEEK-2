@@ -134,6 +134,31 @@ const debounce = (fn, ms) => {
 // li ho fatti funzionare come su Spotify: ricliccando lo stesso
 // filtro torno alla normalità, e ne tengo attivo solo uno alla volta.
 let filtroActivo = null;
+let filtroGeneroActivo = null; // genere selezionato nella lista — persiste tra re-render
+
+// costruisce e renderizza la lista dei generi dai preferiti attuali
+const renderGenreFilter = () => {
+  const mapaGeneros = new Map();
+  getFavourites().forEach((track) => {
+    const genero = track.genre || "Sconosciuto";
+    if (!mapaGeneros.has(genero)) {
+      mapaGeneros.set(genero, { id: genero, title: genero });
+    }
+  });
+  renderResultados([...mapaGeneros.values()], "generi");
+
+  // riapplica l'evidenziazione del genere attivo dopo il re-render
+  if (filtroGeneroActivo) {
+    const contenedor = document.getElementById("sidebar-filter-results");
+    if (contenedor) {
+      contenedor.querySelectorAll(".sidebar-filter-item").forEach((el) => {
+        if (el.querySelector(".filter-label")?.textContent === filtroGeneroActivo) {
+          el.classList.add("active-genre");
+        }
+      });
+    }
+  }
+};
 
 const myFunction = () => {
   const myButtons = document.querySelectorAll(".badge.bg-secondary");
@@ -144,10 +169,24 @@ const myFunction = () => {
   // mi svuota la lista e spegne il verde da tutti i badge
   const resetFiltros = () => {
     filtroActivo = null;
+    filtroGeneroActivo = null;
     if (contenedor) contenedor.replaceChildren();
     myButtons.forEach((b) => {
       b.classList.remove("bg-success");
       b.classList.add("bg-secondary");
+    });
+    // ripristina card, sezioni e preferiti sidebar nascosti dal filtro generi
+    document.querySelectorAll(".card[data-genre]").forEach((c) => (c.style.display = ""));
+    document.querySelectorAll("#sidebar-favs-list [data-genre], #mobile-favs-list [data-genre]").forEach((item) => item.classList.remove("genre-hidden"));
+    [
+      "row-history",
+      "row-favourites",
+      "row-pop",
+      "row-rock",
+      "row-hits",
+    ].forEach((id) => {
+      const section = document.getElementById(id);
+      if (section) section.style.display = "";
     });
   };
 
@@ -197,15 +236,7 @@ const myFunction = () => {
         });
         renderResultados([...mapaAlbums.values()], "album");
       } else if (filtro === "generi") {
-        // raggruppo per genere: un genere solo anche se ho più brani uguali
-        const mapaGeneros = new Map();
-        favourites.forEach((track) => {
-          const genero = track.genre || "Sconosciuto";
-          if (!mapaGeneros.has(genero)) {
-            mapaGeneros.set(genero, { id: genero, title: genero });
-          }
-        });
-        renderResultados([...mapaGeneros.values()], "generi");
+        renderGenreFilter();
       }
     });
   });
@@ -258,10 +289,43 @@ const renderResultados = (lista, tipo) => {
         window.location.href = `artist.html?id=${elemento.id}`;
       });
     } else if (tipo === "generi") {
-      // qui elemento è un genere, quindi mostro solo il suo nome
       const ico = item.querySelector(".ico");
       if (ico) ico.textContent = "🎵";
       item.querySelector(".filter-label").textContent = elemento.title;
+      item.style.cursor = "pointer";
+      item.addEventListener("click", () => {
+        // salva e evidenzia il genere attivo, toglie l'attivo dagli altri
+        filtroGeneroActivo = elemento.title;
+        contenedor
+          .querySelectorAll(".sidebar-filter-item")
+          .forEach((el) => el.classList.remove("active-genre"));
+        item.classList.add("active-genre");
+        // filtra le card della home e i preferiti in sidebar per genere
+        const genreLower = elemento.title.toLowerCase();
+        document.querySelectorAll(".card[data-genre]").forEach((card) => {
+          card.style.display = card.dataset.genre.includes(genreLower) ? "" : "none";
+        });
+        document.querySelectorAll("#sidebar-favs-list [data-genre], #mobile-favs-list [data-genre]").forEach((item) => {
+          const g = item.dataset.genre;
+          item.classList.toggle("genre-hidden", !!(g && !g.includes(genreLower)));
+        });
+        // nasconde le sezioni della home che non hanno più card visibili
+        [
+          "row-ai",
+          "row-history",
+          "row-favourites",
+          "row-pop",
+          "row-rock",
+          "row-hits",
+        ].forEach((id) => {
+          const section = document.getElementById(id);
+          if (!section) return;
+          const hasVisible = [...section.querySelectorAll(".card")].some(
+            (c) => c.style.display !== "none",
+          );
+          section.style.display = hasVisible ? "" : "none";
+        });
+      });
     }
 
     return item;
@@ -370,10 +434,23 @@ class Player {
       }
     });
 
-    // Gestione automatica a fine canzone
+    // Gestione automatica a fine canzone — in home mostra i consigli AI se pronti
     this.audio.addEventListener("ended", () => {
+      const siamoInHome = document.getElementById("row-ai") !== null;
+      console.log("[AI] ended — siamoInHome:", siamoInHome, "| consigliInBackground:", consigliInBackground);
+
+      if (
+        siamoInHome &&
+        consigliInBackground &&
+        consigliInBackground.tracce &&
+        consigliInBackground.tracce.length > 0
+      ) {
+        mostraConsigliSbloccati();
+        return;
+      }
+
       if (this.currentTracklist.length > 1) {
-        this.next(); // Passa alla prossima se è un album
+        this.next();
       } else {
         this.isPlaying = false;
         const btnToggle = document.getElementById("btn-toggle");
@@ -497,23 +574,13 @@ class Player {
 
     footer.replaceChildren(track, center, right);
 
-    // sotto i 576px la barra del volume è nascosta (vedi app.css): il volume
-    // dell'elemento audio resta al massimo e il controllo passa ai tasti fisici
-    const mobileVolumeQuery = window.matchMedia("(max-width: 575.98px)");
-    const applyVolumeForViewport = () => {
-      if (!this.audio) return;
-      if (mobileVolumeQuery.matches) {
-        this.audio.volume = 1;
-      } else {
-        const savedVolume = parseFloat(localStorage.getItem(STORAGE_KEY_VOLUME));
-        const initialVolume = Number.isNaN(savedVolume)
-          ? 0.5
-          : Math.max(0, Math.min(1, savedVolume));
-        this.setVolume(initialVolume);
-      }
-    };
-    applyVolumeForViewport();
-    mobileVolumeQuery.addEventListener("change", applyVolumeForViewport);
+    if (this.audio) {
+      const savedVolume = parseFloat(localStorage.getItem(STORAGE_KEY_VOLUME));
+      const initialVolume = Number.isNaN(savedVolume)
+        ? 0.5
+        : Math.max(0, Math.min(1, savedVolume));
+      this.setVolume(initialVolume);
+    }
 
     btnToggle.addEventListener("click", () => this.togglePlay()); //dai un listener al bottone play /pause
 
@@ -594,7 +661,13 @@ class Player {
       addToHistory(track);
     }
 
+    const footer = document.querySelector(".player");
+    if (footer) footer.classList.add("has-track");
+
     this.updateNowPlayingUI();
+
+    const btnAI = document.getElementById("btn-genera-ai");
+    ottieniSuggerimentiAI(this.currentTrack, btnAI);
   }
   //comportamento del toggle delbottone play /pause
   togglePlay() {
@@ -803,6 +876,8 @@ const toggleFavourite = (track) => {
   localStorage.setItem(STORAGE_KEY_FAVOURITES, JSON.stringify(favourites));
 
   renderSidebarFavourites();
+  // se il filtro generi è aperto, aggiorna la lista con i preferiti appena modificati
+  if (filtroActivo === "generi") renderGenreFilter();
 };
 
 // Helper playlist — stessa struttura dei preferiti.
@@ -960,7 +1035,9 @@ const makeAddButton = (track, className) => {
   const btn = document.createElement("button");
   btn.className = className;
   btn.setAttribute("aria-label", "Aggiungi a playlist");
-  btn.textContent = "+";
+  const icon = document.createElement("ion-icon");
+  icon.setAttribute("name", "add-outline");
+  btn.appendChild(icon);
   btn.addEventListener("click", (e) => {
     e.stopPropagation();
     closePlMenu();
@@ -975,7 +1052,10 @@ const makeAddButton = (track, className) => {
     document.addEventListener("click", closePlMenu, { once: true });
     // la posizione è calcolata una sola volta all'apertura: se si scrolla, il menu
     // si "scollegherebbe" dal bottone — più semplice chiuderlo allo scroll
-    document.addEventListener("scroll", closePlMenu, { capture: true, once: true });
+    document.addEventListener("scroll", closePlMenu, {
+      capture: true,
+      once: true,
+    });
   });
   return btn;
 };
@@ -1009,6 +1089,7 @@ const renderSidebarFavourites = () => {
   const buildFavItem = (track) => {
     const item = tmplFav.content.firstElementChild.cloneNode(true);
     item.classList.add("cursor-pointer");
+    item.dataset.genre = (track.genre || "").toLowerCase(); // usato dal filtro generi
     const img = item.querySelector(".fav-cover");
     img.src = track.cover;
     img.alt = track.title;
@@ -1071,11 +1152,11 @@ const renderSidebarPlaylists = () => {
 
   lists.forEach((list) => {
     const items = [buildFavouritesItem(), ...playlists.map(buildPlaylistItem)];
-    list.replaceChildren(...(playlists.length > 0 ? items : [buildFavouritesItem(), buildEmptyItem()]));
+    list.replaceChildren(...items);
   });
 };
 
-/*
+/* Obsoleta, codice morto
   renderSidebar(activePage)
   - activePage: "home" | "search" | "library" (per evidenziare il link attivo)
 
@@ -1087,6 +1168,7 @@ const renderSidebar = (activePage) => {
       <div class="brand-mark">E</div>
       <span class="brand-text">EpiTunes</span>
     </div>
+    cl
     <nav class="sidebar-nav">
       <a href="index.html"  data-page="home"   ${activePage === "home" ? 'class="active"' : ""}><span class="ico">🏠</span><span>Home</span></a>
       <a href="search.html" data-page="search" ${activePage === "search" ? 'class="active"' : ""}><span class="ico">🔍</span><span>Cerca</span></a>
@@ -1120,5 +1202,202 @@ const initPage = () => {
   // attivo i miei badge filtro (altrimenti i bottoni non fanno niente)
   myFunction();
 
+  // drag-to-scroll verticale sulla sidebar (scrollbar nascosta via CSS)
+  const sidebar = document.querySelector(".sidebar");
+  if (sidebar) {
+    let isDragging = false;
+    let hasDragged = false;
+    let startY = 0;
+    let startScrollTop = 0;
+
+    sidebar.addEventListener("mousedown", (e) => {
+      isDragging = true;
+      hasDragged = false;
+      startY = e.pageY - sidebar.offsetTop;
+      startScrollTop = sidebar.scrollTop;
+      sidebar.style.cursor = "grabbing";
+      e.preventDefault();
+    });
+
+    sidebar.addEventListener("mousemove", (e) => {
+      if (!isDragging) return;
+      hasDragged = true;
+      const y = e.pageY - sidebar.offsetTop;
+      sidebar.scrollTop = startScrollTop - (y - startY);
+    });
+
+    const stopDrag = () => {
+      if (isDragging && hasDragged) {
+        sidebar.addEventListener("click", (e) => e.stopPropagation(), { capture: true, once: true });
+      }
+      isDragging = false;
+      sidebar.style.cursor = "";
+    };
+    sidebar.addEventListener("mouseup", stopDrag);
+    sidebar.addEventListener("mouseleave", stopDrag);
+  }
+
   return player;
+};
+
+/* ============================ 8. Algoritmo AI suggerimenti ============================ */
+
+let consigliInBackground = null;
+let automazioneGiaPartitaPerTraccia = null;
+
+const ottieniSuggerimentiAI = async (currentTrack, buttonElement) => {
+  if (!currentTrack) return;
+  if (automazioneGiaPartitaPerTraccia === currentTrack.id) return;
+  automazioneGiaPartitaPerTraccia = currentTrack.id;
+  console.log("[AI] fetch avviato per:", currentTrack.title, "—", currentTrack.artist);
+
+  if (buttonElement) {
+    buttonElement.disabled = true;
+    buttonElement.innerHTML = `
+      <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+      🧠 L'AI sta già elaborando i prossimi consigli in background...
+    `;
+  }
+
+  try {
+    const N8N_WEBHOOK_URL =
+      "https://javiertorres.app.n8n.cloud/webhook/e7704661-742b-456b-9d9d-89158ebda3af";
+
+    const response = await fetch(N8N_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        titolo: currentTrack.title.replace(/'/g, " "),
+        artista: currentTrack.artist.replace(/'/g, " "),
+        genere: currentTrack.genre || "Music",
+      }),
+    });
+
+    if (!response.ok) throw new Error("Errore server " + response.status);
+
+    const rawText = await response.text();
+    console.log("[AI] risposta webhook testo:", rawText);
+    if (!rawText || !rawText.trim()) throw new Error("Webhook risposta vuota — workflow n8n non attivo?");
+    const canzoniConsigliateRaw = JSON.parse(rawText);
+    console.log("[AI] risposta webhook raw:", canzoniConsigliateRaw);
+    let canzoniConsigliate = [];
+
+    canzoniConsigliateRaw.forEach((item) => {
+      let target = item.data ? item.data : item.body ? item.body : item;
+      if (typeof target === "string") {
+        try {
+          target = JSON.parse(target.trim());
+        } catch (e) {}
+      }
+      if (target && target.results && Array.isArray(target.results)) {
+        target.results.forEach((trackObj) => {
+          canzoniConsigliate.push(new Track(trackObj));
+        });
+      }
+    });
+
+    consigliInBackground = {
+      titoloBranoOrigine: currentTrack.title,
+      tracce: Array.from(new Set(canzoniConsigliate.map((t) => t.id))).map(
+        (id) => canzoniConsigliate.find((t) => t.id === id),
+      ),
+    };
+    console.log("[AI] consigliInBackground pronti:", consigliInBackground.tracce.length, "tracce");
+
+    if (buttonElement) {
+      buttonElement.disabled = false;
+      buttonElement.textContent = "✨ Consigli pronti per la fine del brano";
+    }
+  } catch (error) {
+    console.error("[AI] Errore pre-caricamento:", error);
+    consigliInBackground = null;
+    automazioneGiaPartitaPerTraccia = null;
+    if (buttonElement) {
+      buttonElement.disabled = false;
+      buttonElement.textContent = "✨ Genera consigli AI";
+    }
+  }
+};
+
+let canzoniGiaRiprodottiAI = [];
+
+const mostraConsigliSbloccati = () => {
+  if (
+    !consigliInBackground ||
+    !consigliInBackground.tracce ||
+    consigliInBackground.tracce.length === 0
+  )
+    return;
+
+  const modal = document.getElementById("ai-modal");
+  const titleEl = document.getElementById("ai-modal-title");
+  const container = document.getElementById("ai-modal-cards-container");
+  const closeBtn = document.getElementById("ai-modal-close");
+  const toast = document.getElementById("ai-toast");
+
+  if (!modal || !container) return;
+
+  // aggiorna la riga "Basata sui tuoi gusti" in home
+  renderRow("Basata sui tuoi gusti", consigliInBackground.tracce);
+
+  titleEl.textContent = `🧠 Scelte da EpiTunes basate su: ${consigliInBackground.titoloBranoOrigine}`;
+
+  const tracceAI = consigliInBackground.tracce;
+  const cardsProdotte = tracceAI.map((t) => buildCard(t, tracceAI));
+  container.replaceChildren(...cardsProdotte);
+
+  const chiudiModale = () => {
+    modal.classList.remove("show");
+    setTimeout(() => modal.classList.add("d-none"), 500);
+  };
+
+  cardsProdotte.forEach((card) => {
+    card.addEventListener("click", () => setTimeout(chiudiModale, 150));
+    const btnPlay = card.querySelector(".card-play");
+    if (btnPlay) btnPlay.addEventListener("click", () => setTimeout(chiudiModale, 150));
+  });
+
+  modal.classList.remove("d-none");
+  setTimeout(() => modal.classList.add("show"), 10);
+
+  // sceglie la prima traccia non ancora riprodotta dall'AI
+  let canzoneDaRiprodurre = consigliInBackground.tracce.find(
+    (t) => !canzoniGiaRiprodottiAI.includes(t.id),
+  );
+  if (!canzoneDaRiprodurre && consigliInBackground.tracce.length > 0) {
+    canzoniGiaRiprodottiAI = [];
+    canzoneDaRiprodurre = consigliInBackground.tracce[0];
+  }
+
+  if (canzoneDaRiprodurre && window.player) {
+    canzoniGiaRiprodottiAI.push(canzoneDaRiprodurre.id);
+    window.player.play(canzoneDaRiprodurre, consigliInBackground.tracce);
+
+    if (toast) {
+      toast.innerHTML = `✨ Avviata riproduzione basata sui tuoi gusti. Brano corrente: <b>${canzoneDaRiprodurre.title}</b> - ${canzoneDaRiprodurre.artist}`;
+      toast.classList.remove("d-none");
+      setTimeout(() => toast.classList.add("show"), 50);
+      setTimeout(() => {
+        toast.classList.remove("show");
+        setTimeout(() => toast.classList.add("d-none"), 400);
+      }, 4000);
+    }
+  }
+
+  closeBtn.onclick = chiudiModale;
+  modal.onclick = (e) => {
+    if (e.target === modal) chiudiModale();
+  };
+
+  consigliInBackground = null;
+};
+
+// Test rapido dalla console DevTools: window.testAI()
+window.testAI = async () => {
+  const data = await fetch(
+    "https://itunes.apple.com/search?term=pop&entity=song&limit=5",
+  ).then((r) => r.json());
+  const tracce = data.results.map((raw) => new Track(raw));
+  consigliInBackground = { titoloBranoOrigine: "TEST", tracce };
+  mostraConsigliSbloccati();
 };

@@ -78,13 +78,17 @@ const renderHero = (album, firstTrack, tracks) => {
   btnFav.classList.add("btn-fav-big");
   btnFav.classList.toggle("is-fav", isAlbumFavourite());
   btnFav.setAttribute("aria-label", "Salva album nei preferiti");
-  btnFav.textContent = "♥";
+  const heartHero = document.createElement("ion-icon");
+  heartHero.setAttribute("name", isAlbumFavourite() ? "heart" : "heart-outline");
+  btnFav.appendChild(heartHero);
   btnFav.addEventListener("click", () => {
     const shouldRemove = isAlbumFavourite();
     tracks.forEach((t) => {
       if (isFavourite(t.id) === shouldRemove) toggleFavourite(t);
     });
-    btnFav.classList.toggle("is-fav", isAlbumFavourite());
+    const nowFav = isAlbumFavourite();
+    btnFav.classList.toggle("is-fav", nowFav);
+    heartHero.setAttribute("name", nowFav ? "heart" : "heart-outline");
   });
 
   const actions = document.createElement("div");
@@ -116,11 +120,15 @@ const renderTracklist = (tracks) => {
     btnFav.classList.add("track-fav");
     btnFav.classList.toggle("is-fav", isFavourite(track.id));
     btnFav.setAttribute("aria-label", "Preferito");
-    btnFav.textContent = "♥";
+    const heartIcon = document.createElement("ion-icon");
+    heartIcon.setAttribute("name", isFavourite(track.id) ? "heart" : "heart-outline");
+    btnFav.appendChild(heartIcon);
     btnFav.addEventListener("click", (event) => {
       event.stopPropagation();
       toggleFavourite(track);
-      btnFav.classList.toggle("is-fav", isFavourite(track.id));
+      const nowFav = isFavourite(track.id);
+      btnFav.classList.toggle("is-fav", nowFav);
+      heartIcon.setAttribute("name", nowFav ? "heart" : "heart-outline");
     });
 
     // qui metto il mio "+" sulla riga per aggiungere il brano a una playlist

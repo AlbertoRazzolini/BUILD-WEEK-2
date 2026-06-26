@@ -72,6 +72,7 @@ button {
     "main"
     "player";
   height: 100vh;
+  height: 100dvh; /* dvh = dynamic viewport height: esclude la navigation bar mobile */
 }
 
 .sidebar {
@@ -79,6 +80,11 @@ button {
   background: var(--bg-sidebar);
   padding: 24px 16px;
   overflow-y: auto;
+  display: none;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.sidebar::-webkit-scrollbar {
   display: none;
 }
 
@@ -97,6 +103,35 @@ button {
 }
 
 /* ============================ Sidebar ============================ */
+
+#sidebar-filter-results,
+#sidebar-favs-list,
+#sidebar-playlists-list,
+#mobile-favs-list,
+#mobile-playlists-list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.sidebar-filter-item {
+  cursor: default;
+}
+
+/* Pulsanti filtro (Artisti / Album / Generi) — hover e stato attivo in giallo accent */
+.badge.bg-secondary:hover,
+.badge.bg-success {
+  background-color: var(--accent) !important;
+  color: #6C757D !important;
+}
+.genre-hidden {
+  display: none !important;
+}
+.sidebar-filter-item.active-genre {
+  background: var(--bg-elev-hover);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+}
 
 .brand {
   display: flex;
@@ -358,6 +393,11 @@ button {
   opacity: 0;
   transition: opacity 0.2s;
 }
+.card-fav ion-icon,
+.track-fav ion-icon,
+.btn-fav-big ion-icon {
+  display: block; /* ion-icon è inline per default, block lo centra nel grid */
+}
 .card:hover .card-fav,
 .card-fav.is-fav {
   opacity: 1;
@@ -448,7 +488,7 @@ button {
   display: flex;
   gap: 24px;
   align-items: flex-end;
-  padding: 24px 0 16px 0;
+  padding: 24px 24px 16px 24px;
 }
 .album-cover {
   width: 220px;
@@ -512,6 +552,8 @@ button {
   border: 1px solid var(--text-secondary);
   color: var(--text-secondary);
   font-size: 18px;
+  display: grid;
+  place-items: center;
 }
 .btn-fav-big.is-fav {
   color: var(--danger);
@@ -558,6 +600,8 @@ button {
   border: none;
   color: var(--text-secondary);
   font-size: 16px;
+  display: grid;
+  place-items: center;
 }
 .track-fav.is-fav {
   color: var(--danger);
@@ -625,6 +669,7 @@ button {
   min-width: 0;
 }
 .player-title {
+  display: block; /* <a> è inline di default — block lo mette su riga propria */
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
@@ -633,12 +678,17 @@ button {
   margin: 0;
 }
 .player-artist {
+  display: block;
   font-size: 11px;
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   margin: 0;
+}
+.player.has-track .player-title:hover,
+.player.has-track .player-artist:hover {
+  text-decoration: underline;
 }
 
 .player-center {
@@ -775,6 +825,21 @@ button {
 
 /* Default (sotto i 576px): sidebar nascosta del tutto, si usa l'hamburger/offcanvas mobile */
 
+/* Sotto 576px: topbar compatta — home e hamburger equidistanti, search flessibile */
+@media (max-width: 575px) {
+  .topbar {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .topbar > div {
+    flex: 1;
+    min-width: 0;
+  }
+  .search-input {
+    min-width: 0;
+  }
+}
+
 /* Da 576px: sidebar compatta a icone, niente testo (il "menu" pieno appare da 768px in su) */
 @media (min-width: 576px) {
   .app {
@@ -818,4 +883,78 @@ button {
     justify-content: flex-start;
     padding: 8px 12px;
   }
+}
+
+/* ============================ AI Modal ============================ */
+
+.ai-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  padding: 1rem;
+}
+
+.ai-modal-overlay.show {
+  opacity: 1;
+}
+
+.ai-modal-content {
+  background: var(--bg-elev);
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 820px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.ai-modal-close-btn {
+  position: absolute;
+  top: 0.75rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.75rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0.25rem 0.5rem;
+  transition: color 0.15s;
+}
+
+.ai-modal-close-btn:hover {
+  color: var(--text-primary);
+}
+
+/* ============================ AI Toast ============================ */
+
+.ai-toast {
+  position: fixed;
+  bottom: calc(var(--player-h, 80px) + 1rem);
+  left: 50%;
+  transform: translateX(-50%) translateY(0.75rem);
+  background: var(--bg-elev);
+  color: var(--text-primary);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  z-index: 900;
+  opacity: 0;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  max-width: 500px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.ai-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }

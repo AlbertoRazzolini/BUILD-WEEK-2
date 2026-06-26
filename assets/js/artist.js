@@ -45,8 +45,19 @@ const showNotFound = () => {
   topTracks.replaceChildren();
 };
 
-const renderHero = (artist, firstTrack, tracks = []) => {  // MARCO - aggiunto trakcs = []
+const renderHero = (artist, firstTrack, tracks = []) => {
   const listeners = Math.floor(Math.random() * 5_000_000);
+
+  // cover: usa la copertina del primo brano (iTunes API non fornisce foto artista)
+  const cover = document.createElement("div");
+  cover.classList.add("album-cover");
+  cover.style.borderRadius = "50%"; // forma circolare — convenzione visiva per gli artisti
+  if (firstTrack && firstTrack.cover) {
+    const coverImg = document.createElement("img");
+    coverImg.src = bigArt(firstTrack.cover);
+    coverImg.alt = artist.name;
+    cover.appendChild(coverImg);
+  }
 
   const kicker = document.createElement("p");
   kicker.classList.add("hero-kicker");
@@ -64,13 +75,17 @@ const renderHero = (artist, firstTrack, tracks = []) => {  // MARCO - aggiunto t
   btnPlay.classList.add("btn-play-big");
   btnPlay.setAttribute("aria-label", "Play");
   btnPlay.textContent = "▶";
-  btnPlay.addEventListener("click", () => player.play(firstTrack, tracks)); // MARCO - aggiunto ,tracks
-
+  btnPlay.addEventListener("click", () => player.play(firstTrack, tracks));
+//sdfs
   const actions = document.createElement("div");
   actions.classList.add("hero-actions");
   actions.append(btnPlay);
 
-  artistHero.replaceChildren(kicker, title, sub, actions);
+  const meta = document.createElement("div");
+  meta.classList.add("hero-meta");
+  meta.append(kicker, title, sub, actions);
+
+  artistHero.replaceChildren(cover, meta);
 };
 
 const renderTopTracks = (tracks) => {
@@ -91,11 +106,15 @@ const renderTopTracks = (tracks) => {
     btnFav.classList.add("track-fav");
     btnFav.classList.toggle("is-fav", isFavourite(track.id));
     btnFav.setAttribute("aria-label", "Preferito");
-    btnFav.textContent = "♥";
+    const heartIcon = document.createElement("ion-icon");
+    heartIcon.setAttribute("name", isFavourite(track.id) ? "heart" : "heart-outline");
+    btnFav.appendChild(heartIcon);
     btnFav.addEventListener("click", (event) => {
       event.stopPropagation();
       toggleFavourite(track);
-      btnFav.classList.toggle("is-fav", isFavourite(track.id));
+      const nowFav = isFavourite(track.id);
+      btnFav.classList.toggle("is-fav", nowFav);
+      heartIcon.setAttribute("name", nowFav ? "heart" : "heart-outline");
     });
 
     // qui metto il mio "+" sulla riga per aggiungere il brano a una playlist

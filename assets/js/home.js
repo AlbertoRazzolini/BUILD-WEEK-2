@@ -52,10 +52,13 @@ const fetchTracksByTerm = async (term, genre, country) => {
     const url = `${API_URL}?term=${encodeURIComponent(term)}&media=music&entity=song&limit=50${countryParam}`;
     const response = await fetch(url);
     const data = await response.json();
-    const results = genre
-      ? data.results.filter((raw) =>
-          (raw.primaryGenreName || "").toLowerCase().includes(genre.toLowerCase()),
-        )
+    // genre può essere una stringa singola o un array di stringhe
+    const genres = genre ? (Array.isArray(genre) ? genre : [genre]) : null;
+    const results = genres
+      ? data.results.filter((raw) => {
+          const g = (raw.primaryGenreName || "").toLowerCase();
+          return genres.some((t) => g.includes(t.toLowerCase()));
+        })
       : data.results;
     const tracks = results.slice(0, 25).map((raw) => new Track(raw));
     return tracks;
@@ -97,7 +100,7 @@ const loadHome = async () => {
     // dopo laltra ma tutte insieme e snellire il cariacamento
     const [popTracks, rockTracks, hitsTracks] = await Promise.all([
       fetchTracksByTerm("pop", "Pop"),
-      fetchTracksByTerm("rock", "Rock"),
+      fetchTracksByTerm("rock", ["rock", "alternative", "metal", "punk", "grunge", "indie"]),
       fetchTracksByTerm("pop italiano", "Pop", "IT"),
     ]);
 
@@ -114,6 +117,7 @@ const loadHome = async () => {
 };
 // 3 RENDER DELLE CARD: clona #tmpl-card per ogni track e popola img/titolo/artista
 const ROW_IDS = {
+  "Basata sui tuoi gusti": "row-ai",
   "Riprodotti di recente": "row-history",
   "I tuoi preferiti": "row-favourites",
   "Suggerimenti pop": "row-pop",
@@ -162,7 +166,8 @@ const tmplCard = document.getElementById("tmpl-card");
 
 const buildCard = (track, currentTracklist = []) => { // <-- MODIFICA: Accetta l'array della riga
   const card = tmplCard.content.firstElementChild.cloneNode(true);
-  card.dataset.id = track.id; // serve a Player.updateNowPlayingUI() per evidenziare la card in riproduzione
+  card.dataset.id = track.id;    // serve a Player.updateNowPlayingUI() per evidenziare la card in riproduzione
+  card.dataset.genre = (track.genre || "").toLowerCase(); // serve al filtro generi della sidebar
 
   const img = card.querySelector("img");
   img.src = track.cover;
@@ -177,11 +182,16 @@ const buildCard = (track, currentTracklist = []) => { // <-- MODIFICA: Accetta l
   sub.addEventListener("click", (e) => e.stopPropagation());
 
   const btnFav = card.querySelector(".card-fav");
-  btnFav.classList.toggle("is-fav", isFavourite(track.id));
+  const heartIcon = btnFav.querySelector("ion-icon");
+  const initFav = isFavourite(track.id);
+  btnFav.classList.toggle("is-fav", initFav);
+  if (heartIcon) heartIcon.setAttribute("name", initFav ? "heart" : "heart-outline");
   btnFav.addEventListener("click", (event) => {
     event.stopPropagation();
     toggleFavourite(track);
-    btnFav.classList.toggle("is-fav", isFavourite(track.id));
+    const nowFav = isFavourite(track.id);
+    btnFav.classList.toggle("is-fav", nowFav);
+    if (heartIcon) heartIcon.setAttribute("name", nowFav ? "heart" : "heart-outline");
   });
 
   // qui attacco il "+" sulla card per mettere il brano in una playlist (come nelle card di ricerca)
@@ -222,10 +232,23 @@ const renderRow = (rowTitle, tracks) => {
     container = list;
   }
 
-  // container.replaceChildren(...tracks.map(buildCard));
+  const nuoveCards = tracks.map((track) => buildCard(track, tracks));
 
-  // MODIFICA: Passa esplicitamente sia la traccia singola sia l'intero array 'tracks' della riga
-  container.replaceChildren(...tracks.map(track => buildCard(track, tracks)));
+  if (knownId === "row-ai") {
+    // accumula senza duplicati: stessa traccia può arrivare in chiamate successive
+    const idVisti = new Set(
+      Array.from(container.children)
+        .map((c) => c.dataset.id)
+        .filter(Boolean),
+    );
+    const cardUniche = [
+      ...Array.from(container.children),
+      ...nuoveCards.filter((c) => c.dataset.id && !idVisti.has(c.dataset.id)),
+    ];
+    container.replaceChildren(...cardUniche);
+  } else {
+    container.replaceChildren(...nuoveCards);
+  }
 };
 // appena digiti almeno 3 lettere, salva il termine e vai alla pagina di ricerca dedicata
 const goToSearch = (term) => {
@@ -257,6 +280,39 @@ const initRowNav = () => {
     scroller.querySelector(".row-btn-next")?.addEventListener("click", () =>
       list.scrollBy({ left: getAmt(), behavior: "smooth" })
     );
+
+    // drag-to-scroll: tieni premuto e trascina per scorrere orizzontalmente
+    let isDragging = false;
+    let hasDragged = false;
+    let startX = 0;
+    let startScrollLeft = 0;
+
+    list.addEventListener("mousedown", (e) => {
+      isDragging = true;
+      hasDragged = false;
+      startX = e.pageX - list.offsetLeft;
+      startScrollLeft = list.scrollLeft;
+      list.style.cursor = "grabbing";
+      e.preventDefault();
+    });
+
+    list.addEventListener("mousemove", (e) => {
+      if (!isDragging) return;
+      hasDragged = true;
+      const x = e.pageX - list.offsetLeft;
+      list.scrollLeft = startScrollLeft - (x - startX);
+    });
+
+    const stopDrag = () => {
+      if (isDragging && hasDragged) {
+        // intercetta e blocca il click che segue il mouseup, poi si auto-rimuove
+        list.addEventListener("click", (e) => e.stopPropagation(), { capture: true, once: true });
+      }
+      isDragging = false;
+      list.style.cursor = "";
+    };
+    list.addEventListener("mouseup", stopDrag);
+    list.addEventListener("mouseleave", stopDrag);
   });
 };
 
